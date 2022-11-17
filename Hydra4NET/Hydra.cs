@@ -2,6 +2,9 @@
 {
     public class Hydra
     {
+        public void init()
+        {
 
+        }
     }
 }
