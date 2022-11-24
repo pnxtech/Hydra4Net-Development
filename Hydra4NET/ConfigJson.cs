@@ -6,25 +6,25 @@ using System.Threading.Tasks;
 
 namespace Hydra4NET.ConfigJson
 {
-    public class Rootobject
+    public class HydraConfigObject
     {
-        public Hydra hydra { get; set; }
+        public Hydra? hydra { get; set; }
     }
 
     public class Hydra
     {
-        public string serviceName { get; set; }
-        public string serviceIP { get; set; }
-        public int servicePort { get; set; }
-        public string serviceType { get; set; }
-        public string serviceDescription { get; set; }
-        public Plugins plugins { get; set; }
-        public Redis redis { get; set; }
+        public string? serviceName { get; set; }
+        public string? serviceIP { get; set; }
+        public int? servicePort { get; set; }
+        public string? serviceType { get; set; }
+        public string? serviceDescription { get; set; }
+        public Plugins? plugins { get; set; }
+        public Redis? redis { get; set; }
     }
 
     public class Plugins
     {
-        public Hydralogger hydraLogger { get; set; }
+        public Hydralogger? hydraLogger { get; set; }
     }
 
     public class Hydralogger
@@ -35,8 +35,8 @@ namespace Hydra4NET.ConfigJson
 
     public class Redis
     {
-        public string urlxxx { get; set; }
-        public string host { get; set; }
+        public string? urlxxx { get; set; }
+        public string? host { get; set; }
         public int port { get; set; }
         public int db { get; set; }
     }

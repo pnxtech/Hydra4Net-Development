@@ -1,4 +1,6 @@
-﻿namespace Hydra4NET
+﻿using Hydra4NET.ConfigJson;
+
+namespace Hydra4NET
 {
     /**
      * Hydra is the main class for the Hydra4NET library.
@@ -36,9 +38,10 @@
         }
 
         #region Initialization
-        public void Init(Config config)
+        public void Init(HydraConfigObject? config)
         {
             _internalTask = UpdatePresence();
+            Console.WriteLine($"{config?.hydra?.serviceName}");
         }
         #endregion
 
