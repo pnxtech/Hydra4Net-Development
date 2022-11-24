@@ -1,0 +1,21 @@
+{
+  "hydra": {
+    "serviceName": "testrig-svcs",
+    "serviceIP": "",
+    "servicePort": 12018,
+    "serviceType": "test",
+    "serviceDescription": "Dotnet-based experimental service",
+    "plugins": {
+      "hydraLogger": {
+        "logToConsole": true,
+        "onlyLogLocally": false
+      }
+    },
+    "redis": {
+      "urlxxx": "redis://redis:6379/15",
+      "host": "redis",
+      "port": 6379,
+      "db": 15
+    }
+  }
+}

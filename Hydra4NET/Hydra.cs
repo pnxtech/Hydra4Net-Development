@@ -33,15 +33,16 @@
             TimeSpan interval = TimeSpan.FromSeconds(_ONE_SECOND);
             _timer = new PeriodicTimer(interval);
             UMF uMF = new UMF();
-
         }
 
-        #region Presence and Health check handling
-        public void Init()
+        #region Initialization
+        public void Init(Config config)
         {
             _internalTask = UpdatePresence();
         }
+        #endregion
 
+        #region Presence and Health check handling
         private async Task UpdatePresence()
         {
             try 
