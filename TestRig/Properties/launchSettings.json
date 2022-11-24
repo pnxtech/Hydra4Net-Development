@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TestRig": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker"
+    }
+  }
+}
