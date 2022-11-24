@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Hydra4NET
+namespace Hydra4NET.ConfigJson
 {
     public class Rootobject
     {
@@ -40,6 +40,5 @@ namespace Hydra4NET
         public int port { get; set; }
         public int db { get; set; }
     }
-
 }
 
