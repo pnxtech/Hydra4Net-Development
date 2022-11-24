@@ -1,8 +1,9 @@
 ﻿using Hydra4NET;
 
-Config config = new Config();
-config.Load("./configs/config.json");
 Hydra hydra = new Hydra();
+Config config = new Config();
+
+config.Load("./configs/config.json");
 hydra.Init(config);
 
 Console.WriteLine("Press any key to shutdown");
