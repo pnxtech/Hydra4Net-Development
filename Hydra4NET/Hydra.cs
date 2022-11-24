@@ -1,5 +1,10 @@
 ﻿namespace Hydra4NET
 {
+    /**
+     * Hydra is the main class for the Hydra4NET library.
+     * It is responsible for initializing the Hydra library and
+     * shutting it down.
+     */
     public class Hydra
     {
         #region Private Consts
