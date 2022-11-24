@@ -41,7 +41,7 @@ namespace Hydra4NET
         public void Init(HydraConfigObject? config)
         {
             _internalTask = UpdatePresence();
-            Console.WriteLine($"{config?.hydra?.serviceName}");
+            Console.WriteLine($"{config?.Hydra?.ServiceName}");
         }
         #endregion
 

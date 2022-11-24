@@ -8,37 +8,37 @@ namespace Hydra4NET.ConfigJson
 {
     public class HydraConfigObject
     {
-        public Hydra? hydra { get; set; }
+        public Hydra? Hydra { get; set; }
     }
 
     public class Hydra
     {
-        public string? serviceName { get; set; }
-        public string? serviceIP { get; set; }
-        public int? servicePort { get; set; }
-        public string? serviceType { get; set; }
-        public string? serviceDescription { get; set; }
-        public Plugins? plugins { get; set; }
-        public Redis? redis { get; set; }
+        public string? ServiceName { get; set; }
+        public string? ServiceIP { get; set; }
+        public int? ServicePort { get; set; }
+        public string? ServiceType { get; set; }
+        public string? ServiceDescription { get; set; }
+        public Plugins? Plugins { get; set; }
+        public Redis? Redis { get; set; }
     }
 
     public class Plugins
     {
-        public Hydralogger? hydraLogger { get; set; }
+        public Hydralogger? HydraLogger { get; set; }
     }
 
     public class Hydralogger
     {
-        public bool logToConsole { get; set; }
-        public bool onlyLogLocally { get; set; }
+        public bool LogToConsole { get; set; }
+        public bool OnlyLogLocally { get; set; }
     }
 
     public class Redis
     {
-        public string? urlxxx { get; set; }
-        public string? host { get; set; }
-        public int port { get; set; }
-        public int db { get; set; }
+        public string? Urlxxx { get; set; }
+        public string? Host { get; set; }
+        public int Port { get; set; }
+        public int Db { get; set; }
     }
 }
 
