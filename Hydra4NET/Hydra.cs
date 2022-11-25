@@ -30,6 +30,8 @@ namespace Hydra4NET
         private int _secondsTick = 1;
         private readonly CancellationTokenSource _cts = new();
 
+        public string? ServiceName { get; set; }
+
         public Hydra()
         {
             TimeSpan interval = TimeSpan.FromSeconds(_ONE_SECOND);
@@ -38,10 +40,11 @@ namespace Hydra4NET
         }
 
         #region Initialization
-        public void Init(HydraConfigObject? config)
+        public void Init(HydraConfigObject config)
         {
             _internalTask = UpdatePresence();
             Console.WriteLine($"{config?.Hydra?.ServiceName}");
+            ServiceName = config?.Hydra?.ServiceName;
         }
         #endregion
 
