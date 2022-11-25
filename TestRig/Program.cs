@@ -1,7 +1,7 @@
 ﻿using Hydra4NET;
 using HydraTests;
 
-Hydra hydra = new();
+Hydra hydra = new Hydra();
 Tests hydraTests = new(ref hydra);
 
 hydra.Init(Config.Load("../../../configs/config.json"));
@@ -21,7 +21,7 @@ while (!quit)
             quit = true;
             break;
         case ConsoleKey.F1:
-            hydraTests.TestFunction1();
+            hydraTests.CreateUMFMessage();
             break;
     }
 }

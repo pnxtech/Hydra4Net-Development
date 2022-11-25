@@ -1,19 +1,42 @@
 using Hydra4NET;
+using System.Text.Json;
 
 namespace HydraTests
 {
+    public class MyUMFMessage: UMFBaseMessage
+    {
+        public MyUMFMessage()
+        {
+            To = "hydra-router:/";
+            From = "TestRig:/";
+        }
+    }
+
+    public class MyMessageBody
+    {
+        public string? Field1 { get; set; }
+
+        public void Body()
+        {
+            Field1 = "test";
+        }
+    }
+
     public class Tests
     {
-        private ref Hydra hydraObj;
+        private Hydra _hydra;
 
-        public Tests(ref Hydra? hydra)
+        public Tests(ref Hydra hydra)
         {
-            hydraObj = hydra;
+            _hydra = hydra;
         }
 
-        public void TestFunction1()
+        public void CreateUMFMessage()
         {
-            Console.WriteLine("Hydra Test TestFunction1 called");
+            MyUMFMessage myUMF = new MyUMFMessage();
+            //myUMF.Body = new MyMessageBody();
+            Console.WriteLine("Hydra Test CreateUMFMessage called");
+            Console.WriteLine(JsonSerializer.Serialize(myUMF));
         }
     }
 }

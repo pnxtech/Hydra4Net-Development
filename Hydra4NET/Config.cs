@@ -5,10 +5,10 @@ namespace Hydra4NET
 {
     static public class Config
     {
-        static public HydraConfigObject? Load(string configPath)
+        static public HydraConfigObject Load(string configPath)
         {
             string json = File.ReadAllText(configPath);
-            return JsonSerializer.Deserialize<HydraConfigObject>(json);
+            return (JsonSerializer.Deserialize<HydraConfigObject>(json)) ?? new HydraConfigObject();
         }
     }
 }
