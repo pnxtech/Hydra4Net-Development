@@ -1,10 +1,17 @@
 ﻿using Hydra4NET;
-using HydraTests;
+using TestRig;
 
-Hydra hydra = new Hydra();
-Tests hydraTests = new(ref hydra);
+Hydra hydra = new();
+Tests hydraTests = new(hydra);
 
-hydra.Init(Config.Load("../../../configs/config.json"));
+HydraConfigObject? config = Configuration.Load("../../../configs/config.json");
+if (config == null)
+{
+    Console.WriteLine("Hydra config.json not found");
+    Environment.Exit(1);
+}
+
+hydra.Init(config);
 
 Console.WriteLine("HYDRA4NET Test Rig");
 Console.WriteLine("===================================");

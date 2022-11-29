@@ -1,4 +1,4 @@
-﻿using Hydra4NET.ConfigJson;
+﻿using System.Text.Json;
 
 namespace Hydra4NET
 {

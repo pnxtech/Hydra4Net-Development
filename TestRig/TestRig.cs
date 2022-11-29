@@ -1,7 +1,7 @@
 using Hydra4NET;
 using System.Text.Json;
 
-namespace HydraTests
+namespace TestRig
 {
     public class MyUMFMessage: UMFBaseMessage
     {
@@ -26,7 +26,7 @@ namespace HydraTests
     {
         private Hydra _hydra;
 
-        public Tests(ref Hydra hydra)
+        public Tests(Hydra hydra)
         {
             _hydra = hydra;
         }
