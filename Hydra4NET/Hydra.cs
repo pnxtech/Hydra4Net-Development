@@ -7,7 +7,7 @@ namespace Hydra4NET
      * It is responsible for initializing the Hydra library and
      * shutting it down.
      */
-    public class Hydra
+    sealed public class Hydra
     {
         #region Private Consts
         private const int _ONE_SECOND = 1;
