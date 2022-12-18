@@ -1,17 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 
-namespace Hydra4NET.ConfigJson
+namespace Hydra4NET
 {
-    public class HydraConfigObject
+    static public class Configuration
     {
-        public Hydra? Hydra { get; set; }
+        static public HydraConfigObject? Load(string configPath)
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            string json = File.ReadAllText(configPath);
+            return (JsonSerializer.Deserialize<HydraConfigObject>(json, options));
+        }
     }
 
-    public class Hydra
+    public class HydraConfigObject
+    {
+        public HydraRoot? Hydra { get; set; }
+    }
+
+    public class HydraRoot
     {
         public string? ServiceName { get; set; }
         public string? ServiceIP { get; set; }
