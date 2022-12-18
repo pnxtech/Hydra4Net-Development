@@ -33,8 +33,8 @@ namespace Hydra4NET
 
         public string? ServiceName { get; set; }
 
-        ConnectionMultiplexer? redis;
-        IDatabase? db;
+        ConnectionMultiplexer? _redis;
+        IDatabase? _db;
 
         public Hydra()
         {
@@ -54,11 +54,11 @@ namespace Hydra4NET
             {
                 connectionString = $"{connectionString},{config?.Hydra?.Redis?.Options}";
             }
-            redis = ConnectionMultiplexer.Connect(connectionString);
-            if (redis != null)
+            _redis = ConnectionMultiplexer.Connect(connectionString);
+            if (_redis != null)
             {
-                db = redis.GetDatabase();
-                string? value = db.StringGet($"{_redis_pre_key}:hydra-router:service");
+                _db = _redis.GetDatabase();
+                string? value = _db.StringGet($"{_redis_pre_key}:hydra-router:service");
                 Console.WriteLine(value?? string.Empty);
             }            
         }
