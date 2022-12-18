@@ -44,10 +44,10 @@ namespace Hydra4NET
 
     public class Redis
     {
-        public string? Urlxxx { get; set; }
         public string? Host { get; set; }
         public int Port { get; set; }
         public int Db { get; set; }
+        public string? Options { get; set; }
     }
 }
 

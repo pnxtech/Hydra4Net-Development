@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using StackExchange.Redis;
 
 namespace Hydra4NET
 {
@@ -32,6 +33,9 @@ namespace Hydra4NET
 
         public string? ServiceName { get; set; }
 
+        ConnectionMultiplexer? redis;
+        IDatabase? db;
+
         public Hydra()
         {
             TimeSpan interval = TimeSpan.FromSeconds(_ONE_SECOND);
@@ -45,6 +49,18 @@ namespace Hydra4NET
             _internalTask = UpdatePresence();
             Console.WriteLine($"{config?.Hydra?.ServiceName}");
             ServiceName = config?.Hydra?.ServiceName;
+            String connectionString = $"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port},defaultDatabase={config?.Hydra?.Redis?.Db}";
+            if (config?.Hydra?.Redis?.Options != String.Empty)
+            {
+                connectionString = $"{connectionString},{config?.Hydra?.Redis?.Options}";
+            }
+            redis = ConnectionMultiplexer.Connect(connectionString);
+            if (redis != null)
+            {
+                db = redis.GetDatabase();
+                string? value = db.StringGet($"{_redis_pre_key}:hydra-router:service");
+                Console.WriteLine(value?? string.Empty);
+            }            
         }
         #endregion
 
