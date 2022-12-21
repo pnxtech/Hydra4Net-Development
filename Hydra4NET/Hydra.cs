@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using StackExchange.Redis;
 
 namespace Hydra4NET
@@ -32,23 +33,38 @@ namespace Hydra4NET
         private readonly CancellationTokenSource _cts = new();
 
         public string? ServiceName { get; set; }
+        public string? ServiceDescription { get; set; }
+        public string? ServiceIP { get; set;}
+        public string? ServicePort { get; set; }
+
+        public string? ServiceType { get; set; }
 
         ConnectionMultiplexer? _redis;
         IDatabase? _db;
+
+        private class _RegistrationEntry 
+        { 
+            public string? ServiceName { get; set; }
+            public string? Type { get; set; }
+            public string? RegisteredOn { get; set; }
+        }
 
         public Hydra()
         {
             TimeSpan interval = TimeSpan.FromSeconds(_ONE_SECOND);
             _timer = new PeriodicTimer(interval);
-            UMF uMF = new UMF();
         }
 
         #region Initialization
-        public void Init(HydraConfigObject config)
+        public async Task Init(HydraConfigObject config)
         {
-            _internalTask = UpdatePresence();
+            _internalTask = _UpdatePresence();
             Console.WriteLine($"{config?.Hydra?.ServiceName}");
             ServiceName = config?.Hydra?.ServiceName;
+            ServiceDescription = config?.Hydra?.ServiceDescription;
+            ServiceType = config?.Hydra?.ServiceType;
+            ServiceIP = config?.Hydra?.ServiceIP;
+
             String connectionString = $"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port},defaultDatabase={config?.Hydra?.Redis?.Db}";
             if (config?.Hydra?.Redis?.Options != String.Empty)
             {
@@ -58,23 +74,37 @@ namespace Hydra4NET
             if (_redis != null)
             {
                 _db = _redis.GetDatabase();
-                string? value = _db.StringGet($"{_redis_pre_key}:hydra-router:service");
-                Console.WriteLine(value?? string.Empty);
-            }            
+                await _RegisterService();
+            }
+        }
+        private async Task _RegisterService()
+        {
+            string jsonString = JsonSerializer.Serialize(new _RegistrationEntry
+            {
+                ServiceName = ServiceName,
+                Type = ServiceType,
+                RegisteredOn = UMF.GetTimestamp()
+            }, new JsonSerializerOptions() { 
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+            });
+            if (_db != null)
+            {
+                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", jsonString);
+            }
         }
         #endregion
 
         #region Presence and Health check handling
-        private async Task UpdatePresence()
+        private async Task _UpdatePresence()
         {
             try 
             { 
                 while (await _timer.WaitForNextTickAsync(_cts.Token))
                 {
-                    await PresenceEvent();
+                    await _PresenceEvent();
                     if (_secondsTick++ == _HEALTH_UPDATE_INTERVAL)
                     {
-                        await HealthCheckEvent();
+                        await _HealthCheckEvent();
                         _secondsTick = _ONE_SECOND;
                     }
                 }
@@ -84,13 +114,13 @@ namespace Hydra4NET
             }
         }
 
-        private async Task PresenceEvent()
+        private async Task _PresenceEvent()
         {
             Console.WriteLine("Handling Update Presence");
             await Task.Delay(100);
         }
 
-        private async Task HealthCheckEvent()
+        private async Task _HealthCheckEvent()
         {
             Console.WriteLine("Handling Update Health");
             await Task.Delay(100);

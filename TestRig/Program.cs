@@ -11,7 +11,7 @@ if (config == null)
     Environment.Exit(1);
 }
 
-hydra.Init(config);
+await hydra.Init(config);
 
 Console.WriteLine("HYDRA4NET Test Rig");
 Console.WriteLine("===================================");

@@ -52,5 +52,12 @@ namespace Hydra4NET
         {
             return false;
         }
+
+        public static string GetTimestamp()
+        {
+            DateTime dateTime = DateTime.Now;
+            return dateTime.ToUniversalTime().ToString("u").Replace(" ", "T");
+        }
+
     }
 }
