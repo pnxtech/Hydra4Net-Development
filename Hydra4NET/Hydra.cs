@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using StackExchange.Redis;
@@ -89,13 +90,24 @@ namespace Hydra4NET
         public async Task Init(HydraConfigObject config)
         {
             _internalTask = _UpdatePresence();
-            Console.WriteLine($"{config?.Hydra?.ServiceName}");
             ServiceName = config?.Hydra?.ServiceName;
             ServiceDescription = config?.Hydra?.ServiceDescription;
             ServiceType = config?.Hydra?.ServiceType;
             ServiceIP = config?.Hydra?.ServiceIP;
+            if (ServiceIP == null || ServiceIP == String.Empty)
+            {
+                using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+                socket.Connect("8.8.8.8", 65530);
+                if (socket.LocalEndPoint is IPEndPoint endPoint)
+                {
+                    ServiceIP = endPoint.Address.ToString();
+                }
+            }
+
             InstanceID = Guid.NewGuid().ToString();
             InstanceID = InstanceID.Replace("-", "");
+
+            Console.WriteLine($"{ServiceName} ({InstanceID}) listening on {ServiceIP}");
 
             String connectionString = $"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port},defaultDatabase={config?.Hydra?.Redis?.Db}";
             if (config?.Hydra?.Redis?.Options != String.Empty)
@@ -109,6 +121,7 @@ namespace Hydra4NET
                 await _RegisterService();
             }
         }
+
         private async Task _RegisterService()
         {
             string jsonString = JsonSerializer.Serialize(new _RegistrationEntry
@@ -129,16 +142,18 @@ namespace Hydra4NET
         #region Presence and Health check handling
         private string _BuildHealthCheckEntry()
         {
-            _HealthCheckEntry healthCheckEntry = new _HealthCheckEntry();
-            healthCheckEntry.UpdatedOn = UMF.GetTimestamp();
-            healthCheckEntry.ServiceName = ServiceName;
-            healthCheckEntry.InstanceID = InstanceID;
-            healthCheckEntry.HostName = Dns.GetHostName();
-            healthCheckEntry.SampledOn = UMF.GetTimestamp();
-            healthCheckEntry.ProcessID = Process.GetCurrentProcess().Id;
-            healthCheckEntry.Architecture = System.Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
-            healthCheckEntry.Platform = "Dotnet";
-            healthCheckEntry.NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+            _HealthCheckEntry healthCheckEntry = new()
+            {
+                UpdatedOn = UMF.GetTimestamp(),
+                ServiceName = ServiceName,
+                InstanceID = InstanceID,
+                HostName = Dns.GetHostName(),
+                SampledOn = UMF.GetTimestamp(),
+                ProcessID = Environment.ProcessId,
+                Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE"),
+                Platform = "Dotnet",
+                NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription
+            };
 
             Process proc = Process.GetCurrentProcess();
             healthCheckEntry.Memory = new _MemoryStats
