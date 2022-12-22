@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using System.Diagnostics;
+using System.Net;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using StackExchange.Redis;
 
@@ -36,8 +38,10 @@ namespace Hydra4NET
         public string? ServiceDescription { get; set; }
         public string? ServiceIP { get; set;}
         public string? ServicePort { get; set; }
-
         public string? ServiceType { get; set; }
+        public string? ServiceVersion { get; set;}
+
+        public string? InstanceID { get; set; }
 
         ConnectionMultiplexer? _redis;
         IDatabase? _db;
@@ -47,6 +51,32 @@ namespace Hydra4NET
             public string? ServiceName { get; set; }
             public string? Type { get; set; }
             public string? RegisteredOn { get; set; }
+        }
+
+        public class _MemoryStats
+        {
+            public long PagedMemorySize64 { get; set; }
+            public long PeekPagedMemorySize64 { get; set; }
+            public long VirtualPagedMemorySize64 { get; set; }
+        }
+
+        private class _HealthCheckEntry
+        {
+            public string? UpdatedOn { get; set; }
+            public string? ServiceName { get; set;} 
+            public string? InstanceID { get; set; }
+            public string? HostName { get; set; }
+            public string? SampledOn { get; set; }
+            public int ProcessID { get; set; }
+            public string? Architecture { get; set; }
+            public string? Platform { get; set; }
+            public string? NodeVersion {
+                get; set;
+            }
+
+            public _MemoryStats? Memory { get; set; }
+
+            public double? UptimeSeconds { get; set; }
         }
 
         public Hydra()
@@ -64,6 +94,8 @@ namespace Hydra4NET
             ServiceDescription = config?.Hydra?.ServiceDescription;
             ServiceType = config?.Hydra?.ServiceType;
             ServiceIP = config?.Hydra?.ServiceIP;
+            InstanceID = Guid.NewGuid().ToString();
+            InstanceID = InstanceID.Replace("-", "");
 
             String connectionString = $"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port},defaultDatabase={config?.Hydra?.Redis?.Db}";
             if (config?.Hydra?.Redis?.Options != String.Empty)
@@ -95,6 +127,38 @@ namespace Hydra4NET
         #endregion
 
         #region Presence and Health check handling
+        private string _BuildHealthCheckEntry()
+        {
+            _HealthCheckEntry healthCheckEntry = new _HealthCheckEntry();
+            healthCheckEntry.UpdatedOn = UMF.GetTimestamp();
+            healthCheckEntry.ServiceName = ServiceName;
+            healthCheckEntry.InstanceID = InstanceID;
+            healthCheckEntry.HostName = Dns.GetHostName();
+            healthCheckEntry.SampledOn = UMF.GetTimestamp();
+            healthCheckEntry.ProcessID = Process.GetCurrentProcess().Id;
+            healthCheckEntry.Architecture = System.Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
+            healthCheckEntry.Platform = "Dotnet";
+            healthCheckEntry.NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+
+            Process proc = Process.GetCurrentProcess();
+            healthCheckEntry.Memory = new _MemoryStats
+            {
+                PagedMemorySize64 = proc.PagedMemorySize64,
+                PeekPagedMemorySize64 = proc.PagedMemorySize64,
+                VirtualPagedMemorySize64 = proc.VirtualMemorySize64
+            };
+
+            var runtime = DateTime.Now - Process.GetCurrentProcess().StartTime;
+            healthCheckEntry.UptimeSeconds = runtime.TotalSeconds;
+
+            string jsonString = JsonSerializer.Serialize(healthCheckEntry, new JsonSerializerOptions()
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+
+            return jsonString;
+        }
+
         private async Task _UpdatePresence()
         {
             try 
@@ -122,8 +186,11 @@ namespace Hydra4NET
 
         private async Task _HealthCheckEvent()
         {
+            if (_db != null)
+            {
+                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", _BuildHealthCheckEntry());
+            }
             Console.WriteLine("Handling Update Health");
-            await Task.Delay(100);
         }
         #endregion
 
