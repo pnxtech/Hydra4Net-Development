@@ -37,18 +37,23 @@ namespace Hydra4NET
 
         public string? ServiceName { get; set; }
         public string? ServiceDescription { get; set; }
-        public string? ServiceIP { get; set;}
-        public string? ServicePort { get; set; }
+        public string? ServiceIP { get; set; }
+        public int ServicePort { get; set; }
         public string? ServiceType { get; set; }
-        public string? ServiceVersion { get; set;}
+        public string? ServiceVersion { get; set; }
+
+        public string? HostName { get; set; }
+        public int ProcessID { get; set; }
+        public string? Architecture { get; set; }
+        public string? NodeVersion { get; set; }
 
         public string? InstanceID { get; set; }
 
         ConnectionMultiplexer? _redis;
         IDatabase? _db;
 
-        private class _RegistrationEntry 
-        { 
+        private class _RegistrationEntry
+        {
             public string? ServiceName { get; set; }
             public string? Type { get; set; }
             public string? RegisteredOn { get; set; }
@@ -64,7 +69,7 @@ namespace Hydra4NET
         private class _HealthCheckEntry
         {
             public string? UpdatedOn { get; set; }
-            public string? ServiceName { get; set;} 
+            public string? ServiceName { get; set; }
             public string? InstanceID { get; set; }
             public string? HostName { get; set; }
             public string? SampledOn { get; set; }
@@ -74,10 +79,21 @@ namespace Hydra4NET
             public string? NodeVersion {
                 get; set;
             }
-
             public _MemoryStats? Memory { get; set; }
-
             public double? UptimeSeconds { get; set; }
+        }
+
+        private class _PresenceNodeEntry
+        {
+            public string? ServiceName { get; set; }
+            public string? ServiceDescription { get; set; }
+            public string? Version { get; set; }
+            public string? InstanceID { get; set; }
+            public int ProcessID { get; set; }
+            public string? Ip { get; set; }
+            public int Port { get; set; }
+            public string? HostName { get; set; }
+            public string? UpdatedOn { get; set; }
         }
 
         public Hydra()
@@ -90,9 +106,14 @@ namespace Hydra4NET
         public async Task Init(HydraConfigObject config)
         {
             _internalTask = _UpdatePresence();
+            HostName = Dns.GetHostName();
+            ProcessID = Environment.ProcessId;
+            Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
+            NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
             ServiceName = config?.Hydra?.ServiceName;
             ServiceDescription = config?.Hydra?.ServiceDescription;
             ServiceType = config?.Hydra?.ServiceType;
+            ServicePort = config?.Hydra?.ServicePort ?? 0;
             ServiceIP = config?.Hydra?.ServiceIP;
             if (ServiceIP == null || ServiceIP == String.Empty)
             {
@@ -129,8 +150,8 @@ namespace Hydra4NET
                 ServiceName = ServiceName,
                 Type = ServiceType,
                 RegisteredOn = UMF.GetTimestamp()
-            }, new JsonSerializerOptions() { 
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+            }, new JsonSerializerOptions() {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
             if (_db != null)
             {
@@ -147,12 +168,12 @@ namespace Hydra4NET
                 UpdatedOn = UMF.GetTimestamp(),
                 ServiceName = ServiceName,
                 InstanceID = InstanceID,
-                HostName = Dns.GetHostName(),
+                HostName = HostName,
                 SampledOn = UMF.GetTimestamp(),
-                ProcessID = Environment.ProcessId,
-                Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE"),
+                ProcessID = ProcessID,
+                Architecture = Architecture,
                 Platform = "Dotnet",
-                NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription
+                NodeVersion = NodeVersion
             };
 
             Process proc = Process.GetCurrentProcess();
@@ -171,6 +192,27 @@ namespace Hydra4NET
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
 
+            return jsonString;
+        }
+
+        private string _BuildPresenceNodeEntry()
+        {
+            _PresenceNodeEntry presenceNodeEnty = new()
+            {
+                ServiceName = ServiceName,
+                ServiceDescription = ServiceDescription,
+                Version = "",
+                InstanceID = InstanceID,
+                ProcessID = ProcessID,
+                Ip = ServiceIP,
+                Port = ServicePort,
+                HostName = HostName,
+                UpdatedOn = UMF.GetTimestamp()
+            };
+            string jsonString = JsonSerializer.Serialize(presenceNodeEnty, new JsonSerializerOptions()
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
             return jsonString;
         }
 
@@ -195,8 +237,11 @@ namespace Hydra4NET
 
         private async Task _PresenceEvent()
         {
-            Console.WriteLine("Handling Update Presence");
-            await Task.Delay(100);
+            if (_db != null)
+            {
+                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", InstanceID);
+                await _db.HashSetAsync($"{_redis_pre_key}:nodes", InstanceID, _BuildPresenceNodeEntry());                
+            }
         }
 
         private async Task _HealthCheckEvent()
@@ -205,7 +250,6 @@ namespace Hydra4NET
             {
                 await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", _BuildHealthCheckEntry());
             }
-            Console.WriteLine("Handling Update Health");
         }
         #endregion
 
