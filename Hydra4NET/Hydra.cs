@@ -243,7 +243,8 @@ namespace Hydra4NET
         }
         #endregion
 
-        public async Task Shutdown() { 
+        public async Task Shutdown() 
+        { 
             if (_internalTask != null)
             {
                 _cts.Cancel();
