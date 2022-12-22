@@ -2,7 +2,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using StackExchange.Redis;
 
 namespace Hydra4NET
@@ -187,17 +186,12 @@ namespace Hydra4NET
             var runtime = DateTime.Now - Process.GetCurrentProcess().StartTime;
             healthCheckEntry.UptimeSeconds = runtime.TotalSeconds;
 
-            string jsonString = JsonSerializer.Serialize(healthCheckEntry, new JsonSerializerOptions()
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-
-            return jsonString;
+            return UMF.Serialize(healthCheckEntry);
         }
 
         private string _BuildPresenceNodeEntry()
         {
-            _PresenceNodeEntry presenceNodeEnty = new()
+            _PresenceNodeEntry presenceNodeEntry = new()
             {
                 ServiceName = ServiceName,
                 ServiceDescription = ServiceDescription,
@@ -209,11 +203,7 @@ namespace Hydra4NET
                 HostName = HostName,
                 UpdatedOn = UMF.GetTimestamp()
             };
-            string jsonString = JsonSerializer.Serialize(presenceNodeEnty, new JsonSerializerOptions()
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-            return jsonString;
+            return UMF.Serialize(presenceNodeEntry);
         }
 
         private async Task _UpdatePresence()

@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace TestRig
 {
-    public class MyUMFMessage: UMFBaseMessage
+    public class MyUMFMessage: UMF
     {
         public MyUMFMessage()
         {
@@ -33,10 +33,16 @@ namespace TestRig
 
         public void CreateUMFMessage()
         {
-            MyUMFMessage myUMF = new MyUMFMessage();
-            //myUMF.Body = new MyMessageBody();
+            MyUMFMessage myUMF = new()
+            {
+                Body = new MyMessageBody()
+                {
+                    Field1 = "New value"
+                }
+            };
+            var json = MyUMFMessage.Serialize(myUMF);
             Console.WriteLine("Hydra Test CreateUMFMessage called");
-            Console.WriteLine(JsonSerializer.Serialize(myUMF));
+            Console.WriteLine(json);
         }
     }
 }
