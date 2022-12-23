@@ -1,9 +1,11 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Xml.Linq;
 using StackExchange.Redis;
+using static Hydra4NET.Hydra;
 
 namespace Hydra4NET
 {
@@ -59,7 +61,7 @@ namespace Hydra4NET
             public string? RegisteredOn { get; set; }
         }
 
-        public class _MemoryStats
+        private class _MemoryStatsEntry
         {
             public long PagedMemorySize64 { get; set; }
             public long PeekPagedMemorySize64 { get; set; }
@@ -79,7 +81,7 @@ namespace Hydra4NET
             public string? NodeVersion {
                 get; set;
             }
-            public _MemoryStats? Memory { get; set; }
+            public _MemoryStatsEntry? Memory { get; set; }
             public double? UptimeSeconds { get; set; }
         }
 
@@ -95,6 +97,9 @@ namespace Hydra4NET
             public string? HostName { get; set; }
             public string? UpdatedOn { get; set; }
         }
+
+        public delegate void MessageHandler(string? message);
+        private MessageHandler? _MessageHandler = null;
 
         public Hydra()
         {
@@ -143,30 +148,46 @@ namespace Hydra4NET
             }
         }
 
+        private string _Serialize(object message)
+        {
+            return JsonSerializer.Serialize(message, new JsonSerializerOptions()
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+        }
+
+        public void OnMessageHandler(MessageHandler handler)
+        {
+            if (handler != null)
+            {
+                _MessageHandler = handler;
+            }            
+        }        
+
         private async Task _RegisterService()
         {
             if (_redis != null)
             {
-                //TODO: Use delegates
                 ISubscriber subChannel1 = _redis.GetSubscriber();
                 ISubscriber subChannel2 = _redis.GetSubscriber();
-                subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(async channelMessage => {
-                    await Task.Delay(1000);
-                    Console.WriteLine((string)channelMessage.Message);
+                subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(channelMessage => {
+                    if (_MessageHandler != null)
+                    {
+                        _MessageHandler((string?)channelMessage.Message);
+                    }                    
                 });
-                subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage => {
-                    await Task.Delay(1000);
-                    Console.WriteLine((string)channelMessage.Message);
+                subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(channelMessage => {
+                    if (_MessageHandler != null)
+                    {
+                        _MessageHandler((string?)channelMessage.Message);
+                    }
                 });
             }
-
-            string jsonString = JsonSerializer.Serialize(new _RegistrationEntry
+            string jsonString = _Serialize(new _RegistrationEntry
             {
                 ServiceName = ServiceName,
                 Type = ServiceType,
                 RegisteredOn = UMF.GetTimestamp()
-            }, new JsonSerializerOptions() {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
             if (_db != null)
             {
@@ -192,7 +213,7 @@ namespace Hydra4NET
             };
 
             Process proc = Process.GetCurrentProcess();
-            healthCheckEntry.Memory = new _MemoryStats
+            healthCheckEntry.Memory = new _MemoryStatsEntry
             {
                 PagedMemorySize64 = proc.PagedMemorySize64,
                 PeekPagedMemorySize64 = proc.PagedMemorySize64,
@@ -202,7 +223,7 @@ namespace Hydra4NET
             var runtime = DateTime.Now - Process.GetCurrentProcess().StartTime;
             healthCheckEntry.UptimeSeconds = runtime.TotalSeconds;
 
-            return UMF.Serialize(healthCheckEntry);
+            return _Serialize(healthCheckEntry);
         }
 
         private string _BuildPresenceNodeEntry()
@@ -219,7 +240,7 @@ namespace Hydra4NET
                 HostName = HostName,
                 UpdatedOn = UMF.GetTimestamp()
             };
-            return UMF.Serialize(presenceNodeEntry);
+            return _Serialize(presenceNodeEntry);
         }
 
         private async Task _UpdatePresence()

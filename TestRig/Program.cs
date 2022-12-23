@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Hydra4NET;
 using TestRig;
+using static Hydra4NET.Hydra;
 
 using IHost host = Host.CreateDefaultBuilder(args).Build();
 
@@ -14,8 +15,11 @@ if (config == null)
     Environment.Exit(1);
 }
 
+hydra.OnMessageHandler((string? message) =>
+{
+    Console.WriteLine(message);
+});
 await hydra.Init(config);
-
 await host.RunAsync();
 
 /*
