@@ -145,6 +145,21 @@ namespace Hydra4NET
 
         private async Task _RegisterService()
         {
+            if (_redis != null)
+            {
+                //TODO: Use delegates
+                ISubscriber subChannel1 = _redis.GetSubscriber();
+                ISubscriber subChannel2 = _redis.GetSubscriber();
+                subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(async channelMessage => {
+                    await Task.Delay(1000);
+                    Console.WriteLine((string)channelMessage.Message);
+                });
+                subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage => {
+                    await Task.Delay(1000);
+                    Console.WriteLine((string)channelMessage.Message);
+                });
+            }
+
             string jsonString = JsonSerializer.Serialize(new _RegistrationEntry
             {
                 ServiceName = ServiceName,
