@@ -1,5 +1,4 @@
 using Hydra4NET;
-using System.Text.Json;
 
 namespace TestRig
 {
@@ -40,7 +39,7 @@ namespace TestRig
                     Field1 = "New value"
                 }
             };
-            var json = MyUMFMessage.Serialize(myUMF);
+            var json = UMF.Serialize(myUMF);
             Console.WriteLine("Hydra Test CreateUMFMessage called");
             Console.WriteLine(json);
         }

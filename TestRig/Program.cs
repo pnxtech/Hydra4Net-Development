@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Hydra4NET;
 using TestRig;
-using static Hydra4NET.Hydra;
 
 using IHost host = Host.CreateDefaultBuilder(args).Build();
 
@@ -20,26 +19,5 @@ hydra.OnMessageHandler((string? message) =>
     Console.WriteLine(message);
 });
 await hydra.Init(config);
+
 await host.RunAsync();
-
-/*
-Console.WriteLine("HYDRA4NET Test Rig");
-Console.WriteLine("===================================");
-Console.WriteLine("Press Escape key to shutdown");
-
-bool quit = false;
-while (!quit)
-{
-    ConsoleKeyInfo ki = Console.ReadKey();
-    switch (ki.Key)
-    {
-        case ConsoleKey.Escape:
-            await hydra.Shutdown();
-            quit = true;
-            break;
-        case ConsoleKey.F1:
-            hydraTests.CreateUMFMessage();
-            break;
-    }
-}
-*/

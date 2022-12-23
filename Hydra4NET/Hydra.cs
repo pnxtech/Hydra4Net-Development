@@ -1,11 +1,8 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
-using System.Xml.Linq;
 using StackExchange.Redis;
-using static Hydra4NET.Hydra;
 
 namespace Hydra4NET
 {
@@ -32,28 +29,28 @@ namespace Hydra4NET
         private const string _TRACE = "trace";
         #endregion
 
+        #region Class variables 
         private Task? _internalTask = null;
         private readonly PeriodicTimer _timer;
         private int _secondsTick = 1;
         private readonly CancellationTokenSource _cts = new();
+        public string? ServiceName { get; private set; }
+        public string? ServiceDescription { get; private set; }
+        public string? ServiceIP { get; private set; }
+        public int ServicePort { get; private set; }
+        public string? ServiceType { get; private set; }
+        public string? ServiceVersion { get; private set; }
+        public string? HostName { get; private set; }
+        public int ProcessID { get; private set; }
+        public string? Architecture { get; private set; }
+        public string? NodeVersion { get; private set; }
+        public string? InstanceID { get; private set; }
 
-        public string? ServiceName { get; set; }
-        public string? ServiceDescription { get; set; }
-        public string? ServiceIP { get; set; }
-        public int ServicePort { get; set; }
-        public string? ServiceType { get; set; }
-        public string? ServiceVersion { get; set; }
+        private ConnectionMultiplexer? _redis;
+        private IDatabase? _db;
+        #endregion // Class variables
 
-        public string? HostName { get; set; }
-        public int ProcessID { get; set; }
-        public string? Architecture { get; set; }
-        public string? NodeVersion { get; set; }
-
-        public string? InstanceID { get; set; }
-
-        ConnectionMultiplexer? _redis;
-        IDatabase? _db;
-
+        #region Entry classses
         private class _RegistrationEntry
         {
             public string? ServiceName { get; set; }
@@ -97,9 +94,12 @@ namespace Hydra4NET
             public string? HostName { get; set; }
             public string? UpdatedOn { get; set; }
         }
+        #endregion / Entry classes
 
+        #region Message delegate
         public delegate void MessageHandler(string? message);
         private MessageHandler? _MessageHandler = null;
+        #endregion // Message delegate
 
         public Hydra()
         {
@@ -135,7 +135,7 @@ namespace Hydra4NET
 
             Console.WriteLine($"{ServiceName} ({InstanceID}) listening on {ServiceIP}");
 
-            String connectionString = $"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port},defaultDatabase={config?.Hydra?.Redis?.Db}";
+            string connectionString = $"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port},defaultDatabase={config?.Hydra?.Redis?.Db}";
             if (config?.Hydra?.Redis?.Options != String.Empty)
             {
                 connectionString = $"{connectionString},{config?.Hydra?.Redis?.Options}";
@@ -147,6 +147,29 @@ namespace Hydra4NET
                 await _RegisterService();
             }
         }
+        #endregion
+
+        public void OnMessageHandler(MessageHandler handler)
+        {
+            if (handler != null)
+            {
+                _MessageHandler = handler;
+            }
+        }
+
+        public async Task Shutdown()
+        {
+            if (_internalTask != null)
+            {
+                _cts.Cancel();
+                await _internalTask;
+                _cts.Dispose();
+            }
+        }
+
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////// [[ INTERNAL AND PRIVATE MEMBERS ]] ////////////////////////////////////////
+        ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         private string _Serialize(object message)
         {
@@ -155,14 +178,6 @@ namespace Hydra4NET
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
         }
-
-        public void OnMessageHandler(MessageHandler handler)
-        {
-            if (handler != null)
-            {
-                _MessageHandler = handler;
-            }            
-        }        
 
         private async Task _RegisterService()
         {
@@ -194,7 +209,6 @@ namespace Hydra4NET
                 await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", jsonString);
             }
         }
-        #endregion
 
         #region Presence and Health check handling
         private string _BuildHealthCheckEntry()
@@ -279,15 +293,5 @@ namespace Hydra4NET
             }
         }
         #endregion
-
-        public async Task Shutdown() 
-        { 
-            if (_internalTask != null)
-            {
-                _cts.Cancel();
-                await _internalTask;
-                _cts.Dispose();
-            }
-        }
     }
 }
