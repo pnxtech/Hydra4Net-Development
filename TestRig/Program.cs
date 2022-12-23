@@ -1,10 +1,13 @@
-﻿using Hydra4NET;
+﻿using Microsoft.Extensions.Hosting;
+using Hydra4NET;
 using TestRig;
+
+using IHost host = Host.CreateDefaultBuilder(args).Build();
 
 Hydra hydra = new();
 Tests hydraTests = new(hydra);
 
-HydraConfigObject? config = Configuration.Load("../../../configs/config.json");
+HydraConfigObject? config = Configuration.Load("config.json");
 if (config == null)
 {
     Console.WriteLine("Hydra config.json not found");
@@ -13,6 +16,9 @@ if (config == null)
 
 await hydra.Init(config);
 
+await host.RunAsync();
+
+/*
 Console.WriteLine("HYDRA4NET Test Rig");
 Console.WriteLine("===================================");
 Console.WriteLine("Press Escape key to shutdown");
@@ -32,4 +38,4 @@ while (!quit)
             break;
     }
 }
-
+*/

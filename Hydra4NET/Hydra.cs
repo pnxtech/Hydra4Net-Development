@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
+using System.Xml.Linq;
 using StackExchange.Redis;
 
 namespace Hydra4NET
