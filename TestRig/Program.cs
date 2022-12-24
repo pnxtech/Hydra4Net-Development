@@ -20,10 +20,10 @@ if (config == null)
     Environment.Exit(1);
 }
 
-hydra.OnMessageHandler(async (string? message) =>
+hydra.OnMessageHandler(async (string type, string? message, object jobject) =>
 {
-    Console.WriteLine(message);
-    await Task.Delay(1);
+    Console.WriteLine($"{type}: {message}");
+    await Task.Delay(0);
 });
 
 await hydra.Init(config);

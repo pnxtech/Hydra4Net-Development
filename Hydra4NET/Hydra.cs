@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using StackExchange.Redis;
+using Newtonsoft.Json.Linq;
 
 namespace Hydra4NET
 {
@@ -49,7 +50,7 @@ namespace Hydra4NET
         #endregion // Class variables
 
         #region Message delegate
-        public delegate Task MessageHandler(string? message);
+        public delegate Task MessageHandler(string type, string? message, object jobject);
         private MessageHandler? _MessageHandler = null;
         #endregion // Message delegate
 
@@ -132,13 +133,19 @@ namespace Hydra4NET
                 subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(async channelMessage => {
                     if (_MessageHandler != null)
                     {
-                        await _MessageHandler((string?)channelMessage.Message);
-                    }                    
+                        string msg = (string?)channelMessage.Message ?? String.Empty;
+                        JObject o = JObject.Parse(msg);
+                        string type = (string?)o["typ"] ?? String.Empty;
+                        await _MessageHandler(type, msg, o);
+                    }
                 });
                 subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage => {
                     if (_MessageHandler != null)
                     {
-                        await _MessageHandler((string?)channelMessage.Message);
+                        string msg = (string?)channelMessage.Message ?? String.Empty;
+                        JObject o = JObject.Parse(msg);
+                        string type = (string?)o["typ"] ?? String.Empty;
+                        await _MessageHandler(type, msg, o);
                     }
                 });
             }
