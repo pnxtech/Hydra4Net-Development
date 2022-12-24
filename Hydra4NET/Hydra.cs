@@ -151,7 +151,7 @@ namespace Hydra4NET
             }
             if (_db != null)
             {
-                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", _Serialize(new RegistrationEntry
+                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", Serialize(new RegistrationEntry
                 {
                     ServiceName = ServiceName,
                     Type = ServiceType,

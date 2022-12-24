@@ -4,7 +4,7 @@ namespace Hydra4NET
 {
     public partial class Hydra
     {
-        private string _Serialize(object message)
+        private string Serialize(object message)
         {
             return JsonSerializer.Serialize(message, new JsonSerializerOptions()
             {
