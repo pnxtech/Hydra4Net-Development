@@ -2,25 +2,22 @@ using Hydra4NET;
 
 namespace TestRig
 {
-    public class MyUMFMessage: UMF
+    public class TestMsgBody
     {
-        public MyUMFMessage()
+        public string? Msg { get; set; }
+        public int? Id { get; set; }
+    }
+
+    public class TestMsg: UMF<TestMsgBody>
+    {
+        public TestMsg()
         {
             To = "hydra-router:/";
-            From = "TestRig:/";
+            Frm = "TestRig:/";
+            Typ = "testMsg";
         }
     }
-
-    public class MyMessageBody
-    {
-        public string? Field1 { get; set; }
-
-        public void Body()
-        {
-            Field1 = "test";
-        }
-    }
-
+        
     public class Tests
     {
         private Hydra _hydra;
@@ -32,16 +29,18 @@ namespace TestRig
 
         public void CreateUMFMessage()
         {
-            MyUMFMessage myUMF = new()
-            {
-                Body = new MyMessageBody()
-                {
-                    Field1 = "New value"
-                }
-            };
-            var json = UMF.Serialize(myUMF);
+            TestMsg myUMF = new();
+            myUMF.Bdy.Msg = "New value";
+            myUMF.Bdy.Id = 34;
+
+            string json = myUMF.Serialize();
             Console.WriteLine("Hydra Test CreateUMFMessage called");
             Console.WriteLine(json);
+        }
+
+        public TestMsg? ParseTestMsg(string json)
+        {
+            return TestMsg.Deserialize<TestMsg>(json);
         }
     }
 }

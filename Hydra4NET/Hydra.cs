@@ -50,7 +50,7 @@ namespace Hydra4NET
         #endregion // Class variables
 
         #region Message delegate
-        public delegate Task MessageHandler(string type, string? message, object jobject);
+        public delegate Task MessageHandler(string type, string? message);
         private MessageHandler? _MessageHandler = null;
         #endregion // Message delegate
 
@@ -63,7 +63,7 @@ namespace Hydra4NET
         #region Initialization
         public async Task Init(HydraConfigObject config)
         {
-            _internalTask = _UpdatePresence();
+            _internalTask = UpdatePresence();
             HostName = Dns.GetHostName();
             ProcessID = Environment.ProcessId;
             Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
@@ -97,7 +97,7 @@ namespace Hydra4NET
             if (_redis != null)
             {
                 _db = _redis.GetDatabase();
-                await _RegisterService();
+                await RegisterService();
             }
         }
         #endregion
@@ -124,7 +124,7 @@ namespace Hydra4NET
         /////////////////////////////////////// [[ INTERNAL AND PRIVATE MEMBERS ]] ////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        private async Task _RegisterService()
+        private async Task RegisterService()
         {
             if (_redis != null)
             {
@@ -136,7 +136,7 @@ namespace Hydra4NET
                         string msg = (string?)channelMessage.Message ?? String.Empty;
                         JObject o = JObject.Parse(msg);
                         string type = (string?)o["typ"] ?? String.Empty;
-                        await _MessageHandler(type, msg, o);
+                        await _MessageHandler(type, msg);
                     }
                 });
                 subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage => {
@@ -145,17 +145,17 @@ namespace Hydra4NET
                         string msg = (string?)channelMessage.Message ?? String.Empty;
                         JObject o = JObject.Parse(msg);
                         string type = (string?)o["typ"] ?? String.Empty;
-                        await _MessageHandler(type, msg, o);
+                        await _MessageHandler(type, msg);
                     }
                 });
             }
             if (_db != null)
             {
-                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", _Serialize(new _RegistrationEntry
+                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", _Serialize(new RegistrationEntry
                 {
                     ServiceName = ServiceName,
                     Type = ServiceType,
-                    RegisteredOn = UMF.GetTimestamp()
+                    RegisteredOn = GetTimestamp()
                 }));
                 await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:service", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
             }

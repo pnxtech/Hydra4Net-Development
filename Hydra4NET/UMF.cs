@@ -1,54 +1,61 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 
 namespace Hydra4NET
 {
-    public class UMF
+    public class UMFBase
     {
-        private const string _UMF_Version = "UMF/1.4.6";
+        protected const string _UMF_Version = "UMF/1.4.6";
+        protected string _To;
+        protected string _From;
+        protected string _Mid;
+        protected string _Type;
+        protected string _Version;
+        protected string _Timestamp;
 
-        public string To { get; set; }
-        public string From { get; set; }
-        public string Mid { get; set; }
-        public string Version { get; set; }
-        public string Timestamp { get; set; }
-        public object Body { get; set; }
-
-        public UMF()
+        protected UMFBase()
         {
-            To ??= "";
-            From ??= "";
-            Mid = Guid.NewGuid().ToString();
-            Version = _UMF_Version;
-            Timestamp = UMF.GetTimestamp();
-            Body = new object();
+            _To ??= String.Empty;
+            _From ??= String.Empty;
+            _Mid = Guid.NewGuid().ToString();
+            _Type = String.Empty;
+            _Version = _UMF_Version;
+            _Timestamp = GetTimestamp();
         }
 
-        public static string GetTimestamp()
+        public string To
         {
-            DateTime dateTime = DateTime.Now;
-            return dateTime.ToUniversalTime().ToString("u").Replace(" ", "T");
+            get { return _To; }
+            set { _To = value; }
         }
 
-        public static string Serialize(object message)
+        public string Frm
         {
-            return JsonSerializer.Serialize(message, new JsonSerializerOptions()
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
+            get { return _From; }
+            set { _From = value; }
         }
-    }    
 
-    /*
-    public class UMF
-    {
-        public bool Validate(UMFBaseMessage message)
+        public string Mid
         {
-            return false;
+            get { return _Mid; }
+            set { _Mid = value; }
+        }
+
+        public string Typ
+        {
+            get { return _Type; }
+            set { _Type = value; }
+        }
+
+        public string Ver
+        {
+            get { return _Version; }
+            set { _Version = value; }
+        }
+
+        public string Ts
+        {
+            get { return _Timestamp; }
+            set { _Timestamp = value; }
         }
 
         public static string GetTimestamp()
@@ -57,5 +64,36 @@ namespace Hydra4NET
             return dateTime.ToUniversalTime().ToString("u").Replace(" ", "T");
         }
     }
-    */
+
+    public class UMF<T> : UMFBase where T : class, new()
+    {
+        private T _Body;
+
+        public T Bdy 
+        { 
+            get { return _Body; } 
+            set { _Body = value; }  
+        }
+
+        public UMF()
+        {
+            _Body = new T();
+        }
+
+        public string Serialize()
+        {
+            return JsonSerializer.Serialize(this, new JsonSerializerOptions()
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+        }
+
+        static public U? Deserialize<U>(string message)
+        {
+            return JsonSerializer.Deserialize<U>(message, new JsonSerializerOptions() 
+            { 
+                PropertyNameCaseInsensitive = true 
+            });
+        }
+    }    
 }

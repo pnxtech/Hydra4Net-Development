@@ -11,5 +11,11 @@ namespace Hydra4NET
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
         }
+
+        public static string GetTimestamp()
+        {
+            DateTime dateTime = DateTime.Now;
+            return dateTime.ToUniversalTime().ToString("u").Replace(" ", "T");
+        }
     }
 }

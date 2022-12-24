@@ -5,21 +5,21 @@ namespace Hydra4NET
     public partial class Hydra
     {
         #region Entry classses
-        private class _RegistrationEntry
+        private class RegistrationEntry
         {
             public string? ServiceName { get; set; }
             public string? Type { get; set; }
             public string? RegisteredOn { get; set; }
         }
 
-        private class _MemoryStatsEntry
+        private class MemoryStatsEntry
         {
             public long PagedMemorySize64 { get; set; }
             public long PeekPagedMemorySize64 { get; set; }
             public long VirtualPagedMemorySize64 { get; set; }
         }
 
-        private class _HealthCheckEntry
+        private class HealthCheckEntry
         {
             public string? UpdatedOn { get; set; }
             public string? ServiceName { get; set; }
@@ -33,11 +33,11 @@ namespace Hydra4NET
             {
                 get; set;
             }
-            public _MemoryStatsEntry? Memory { get; set; }
+            public MemoryStatsEntry? Memory { get; set; }
             public double? UptimeSeconds { get; set; }
         }
 
-        private class _PresenceNodeEntry
+        private class PresenceNodeEntry
         {
             public string? ServiceName { get; set; }
             public string? ServiceDescription { get; set; }
@@ -49,18 +49,18 @@ namespace Hydra4NET
             public string? HostName { get; set; }
             public string? UpdatedOn { get; set; }
         }
-        #endregion / Entry classes
+        #endregion // Entry classes
 
         #region Presence and Health check handling
-        private string _BuildHealthCheckEntry()
+        private string BuildHealthCheckEntry()
         {
-            _HealthCheckEntry healthCheckEntry = new()
+            HealthCheckEntry healthCheckEntry = new()
             {
-                UpdatedOn = UMF.GetTimestamp(),
+                UpdatedOn = GetTimestamp(),
                 ServiceName = ServiceName,
                 InstanceID = InstanceID,
                 HostName = HostName,
-                SampledOn = UMF.GetTimestamp(),
+                SampledOn = GetTimestamp(),
                 ProcessID = ProcessID,
                 Architecture = Architecture,
                 Platform = "Dotnet",
@@ -68,7 +68,7 @@ namespace Hydra4NET
             };
 
             Process proc = Process.GetCurrentProcess();
-            healthCheckEntry.Memory = new _MemoryStatsEntry
+            healthCheckEntry.Memory = new MemoryStatsEntry
             {
                 PagedMemorySize64 = proc.PagedMemorySize64,
                 PeekPagedMemorySize64 = proc.PagedMemorySize64,
@@ -81,9 +81,9 @@ namespace Hydra4NET
             return _Serialize(healthCheckEntry);
         }
 
-        private string _BuildPresenceNodeEntry()
+        private string BuildPresenceNodeEntry()
         {
-            _PresenceNodeEntry presenceNodeEntry = new()
+            PresenceNodeEntry presenceNodeEntry = new()
             {
                 ServiceName = ServiceName,
                 ServiceDescription = ServiceDescription,
@@ -93,21 +93,21 @@ namespace Hydra4NET
                 Ip = ServiceIP,
                 Port = ServicePort,
                 HostName = HostName,
-                UpdatedOn = UMF.GetTimestamp()
+                UpdatedOn = GetTimestamp()
             };
             return _Serialize(presenceNodeEntry);
         }
 
-        private async Task _UpdatePresence()
+        private async Task UpdatePresence()
         {
             try
             {
                 while (await _timer.WaitForNextTickAsync(_cts.Token))
                 {
-                    await _PresenceEvent();
+                    await PresenceEvent();
                     if (_secondsTick++ == _HEALTH_UPDATE_INTERVAL)
                     {
-                        await _HealthCheckEvent();
+                        await HealthCheckEvent();
                         _secondsTick = _ONE_SECOND;
                     }
                 }
@@ -117,24 +117,24 @@ namespace Hydra4NET
             }
         }
 
-        private async Task _PresenceEvent()
+        private async Task PresenceEvent()
         {
             if (_db != null)
             {
                 await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", InstanceID);
                 await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
-                await _db.HashSetAsync($"{_redis_pre_key}:nodes", InstanceID, _BuildPresenceNodeEntry());
+                await _db.HashSetAsync($"{_redis_pre_key}:nodes", InstanceID, BuildPresenceNodeEntry());
             }
         }
 
-        private async Task _HealthCheckEvent()
+        private async Task HealthCheckEvent()
         {
             if (_db != null)
             {
-                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", _BuildHealthCheckEntry());
+                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", BuildHealthCheckEntry());
                 await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
             }
         }
-        #endregion
+        #endregion // Presence and Health check handling
     }
 }
