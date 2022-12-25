@@ -42,5 +42,15 @@ namespace TestRig
         {
             return TestMsg.Deserialize<TestMsg>(json);
         }
+
+        public void TestUMFParseRoutes()
+        {
+            //string to = "de571e9695c24c0eb12834ae5ee2f404-8u0f9wls7r@hydra-router:[get]/";
+            string to = "de571e9695c24c0eb12834ae5ee2f404@hydra-router:[get]/";
+            //string to = "hydra-router:[get]/";
+            //string to = "hydra-router:/";
+            UMFRouteEntry parsedEntry = UMF<TestMsg>.ParseRoute(to);
+            Console.WriteLine(parsedEntry.ToString());
+        }
     }
-}
+}   

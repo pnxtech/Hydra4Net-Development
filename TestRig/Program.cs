@@ -30,7 +30,9 @@ hydra.OnMessageHandler(async (string type, string? message) =>
     await Task.Delay(0);
 });
 
-hydraTests.CreateUMFMessage();
+// Tests
+// hydraTests.CreateUMFMessage();
+// hydraTests.TestUMFParseRoutes();
 
 await hydra.Init(config);
 await host.RunAsync();
