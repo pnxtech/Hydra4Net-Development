@@ -7,3 +7,4 @@ This is an experimental release of an implementation of Hydra for .NET. Years ag
 
 More about and related open source projects can be found at: https://github.com/pnxtech where other implementations of Hydra are available for NodeJS, Python and Dart can be found.
 
+Nuget packaged versions of Hydra4Net are available at: [https://www.nuget.org/packages/Hydra4NET](https://www.nuget.org/packages/Hydra4NET)
