@@ -1,5 +1,10 @@
 ﻿using System.Diagnostics;
 
+/**
+ * Hydra Health and Presence module
+ * This module implements a periodic timer which retrieves operating 
+ * system process stats metrics and periodically writes them to Redis.
+ */
 namespace Hydra4NET
 {
     public partial class Hydra

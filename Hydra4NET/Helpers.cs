@@ -1,5 +1,8 @@
 ﻿using System.Text.Json;
 
+/**
+ * Hydra helper functions
+ */
 namespace Hydra4NET
 {
     public partial class Hydra

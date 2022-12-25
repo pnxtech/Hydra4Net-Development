@@ -2,9 +2,15 @@
 using Hydra4NET;
 using TestRig;
 
+// Create an instance of Hydra4Net
 Hydra hydra = new();
+
+// Create an instance of a Test class for testing
+// hydra functions during development
 Tests hydraTests = new(hydra);
 
+// Create a Host instance to prevent this console app
+// from closing and to track application close
 using IHost host = Host.CreateDefaultBuilder(args).Build();
 AppDomain.CurrentDomain.ProcessExit += AppDomain_ProcessExit;
 void AppDomain_ProcessExit(object? sender, EventArgs e)
@@ -12,6 +18,8 @@ void AppDomain_ProcessExit(object? sender, EventArgs e)
     hydra.Shutdown();
 }
 
+// Load the hydra config.json file
+//
 HydraConfigObject? config = Configuration.Load("config.json");
 if (config == null)
 {
@@ -19,6 +27,8 @@ if (config == null)
     Environment.Exit(1);
 }
 
+// Setup an OnMessageHandler to recieve incoming UMF messages
+//
 hydra.OnMessageHandler(async (string type, string? message) =>
 {
     Console.WriteLine($"{type}: {message}");
@@ -34,6 +44,8 @@ hydra.OnMessageHandler(async (string type, string? message) =>
 // hydraTests.CreateUMFMessage();
 // hydraTests.TestUMFParseRoutes();
 
+// Initialize Hydra using the loaded config file
+// and prevent application from closing
 await hydra.Init(config);
 await host.RunAsync();
 

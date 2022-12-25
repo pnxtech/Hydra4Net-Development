@@ -1,5 +1,9 @@
 ﻿using System.Text.Json;
 
+/**
+ * Configuration
+ * Hydra configuration loader
+ */
 namespace Hydra4NET
 {
     static public class Configuration

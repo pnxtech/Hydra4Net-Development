@@ -1,5 +1,11 @@
 ﻿using System.Text.Json;
 
+/**
+ * UMF - Universal Message Format
+ * This module implements UMF based messages for standard interoperability 
+ * between Hydra-based services, messaging and job queuing.
+ * See: https://github.com/pnxtech/umf
+ */
 namespace Hydra4NET
 {
     /** 
@@ -16,6 +22,10 @@ namespace Hydra4NET
         public string Error { get; set; } = String.Empty;
     }
 
+    /**
+     * UMFBase
+     * UMF base class used by the UMF class
+     */
     public class UMFBase
     {
         protected const string _UMF_Version = "UMF/1.4.6";
@@ -72,6 +82,10 @@ namespace Hydra4NET
             set { _Timestamp = value; }
         }
 
+        /**
+         * GetTimestap()
+         * Retreive an ISO 8601 formatted UTC string
+         */
         public static string GetTimestamp()
         {
             DateTime dateTime = DateTime.Now;
@@ -161,6 +175,12 @@ namespace Hydra4NET
         }
     }
 
+    /**
+     * UMF
+     * The Generics-based UMF class that's used by deriving classes to 
+     * implement a UMF and body message pair. T is the class type of 
+     * the UMF's message body.
+     */
     public class UMF<T> : UMFBase where T : class, new()
     {
         private T _Body;
@@ -176,6 +196,13 @@ namespace Hydra4NET
             _Body = new T();
         }
 
+        /**
+         * Serialize
+         * A JSON serializer helper which ensures that the generated JSON is 
+         * compatible with JavaScript camel case. This is essential as 
+         * Hydra-based services written in non-Dotnet environments expect a 
+         * universal format.
+         **/
         public string Serialize()
         {
             return JsonSerializer.Serialize(this, new JsonSerializerOptions()
@@ -184,11 +211,16 @@ namespace Hydra4NET
             });
         }
 
+        /**
+         * Deserilize
+         * JSON Deserilization helper
+         **/
         static public U? Deserialize<U>(string message)
         {
             return JsonSerializer.Deserialize<U>(message, new JsonSerializerOptions() 
             { 
-                PropertyNameCaseInsensitive = true 
+                PropertyNameCaseInsensitive = true
+                // TODO: test the use of: PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
         }
     }    
