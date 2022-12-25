@@ -78,7 +78,7 @@ namespace Hydra4NET
             var runtime = DateTime.Now - Process.GetCurrentProcess().StartTime;
             healthCheckEntry.UptimeSeconds = runtime.TotalSeconds;
 
-            return _Serialize(healthCheckEntry);
+            return Serialize(healthCheckEntry);
         }
 
         private string BuildPresenceNodeEntry()
@@ -95,7 +95,7 @@ namespace Hydra4NET
                 HostName = HostName,
                 UpdatedOn = GetTimestamp()
             };
-            return _Serialize(presenceNodeEntry);
+            return Serialize(presenceNodeEntry);
         }
 
         private async Task UpdatePresence()

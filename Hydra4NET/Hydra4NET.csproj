@@ -1,14 +1,38 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>Hydra for .NET</Title>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyVersion>0.0.1</AssemblyVersion>
+    <FileVersion>0.0.1</FileVersion>
+    <Version>0.0.1</Version>
+    <Description>Hydra for .NET is a library for building microservices.</Description>
+    <Copyright>2022 Carlos Justiniano and Contributors</Copyright>
+    <PackageTags>hydra microservice</PackageTags>
+    <PackageReleaseNotes>This is a work-in-progress experimental releasee.</PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/pnxtech/Hydra4Net-Development</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="StackExchange.Redis" Version="2.6.70" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>
