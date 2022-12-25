@@ -45,6 +45,7 @@ namespace Hydra4NET
         public string? NodeVersion { get; private set; }
         public string? InstanceID { get; private set; }
 
+        private IServer _server;
         private ConnectionMultiplexer? _redis;
         private IDatabase? _db;
         #endregion // Class variables
@@ -96,6 +97,7 @@ namespace Hydra4NET
             _redis = ConnectionMultiplexer.Connect(connectionString);
             if (_redis != null)
             {
+                _server = _redis.GetServer($"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port}");
                 _db = _redis.GetDatabase();
                 await RegisterService();
             }
