@@ -1,4 +1,5 @@
 using Hydra4NET;
+using static Hydra4NET.Hydra;
 
 /**
  * TestRig
@@ -72,6 +73,19 @@ namespace TestRig
             //string to = "hydra-router:/";
             UMFRouteEntry parsedEntry = UMF<TestMsg>.ParseRoute(to);
             Console.WriteLine(parsedEntry.ToString());
+        }
+
+        /**
+         * Test presence
+         */
+
+        public async Task GetPresence(string serviceName)
+        {
+            List<PresenceNodeEntry>? entries = await _hydra.GetPresence(serviceName);
+            if (entries.Count == 0)
+            {
+
+            }
         }
     }
 }   

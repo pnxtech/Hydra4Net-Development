@@ -1,4 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text.Json;
+using StackExchange.Redis;
 
 /**
  * Hydra Health and Presence module
@@ -10,21 +13,21 @@ namespace Hydra4NET
     public partial class Hydra
     {
         #region Entry classses
-        private class RegistrationEntry
+        public class RegistrationEntry
         {
             public string? ServiceName { get; set; }
             public string? Type { get; set; }
             public string? RegisteredOn { get; set; }
         }
 
-        private class MemoryStatsEntry
+        public class MemoryStatsEntry
         {
             public long PagedMemorySize64 { get; set; }
             public long PeekPagedMemorySize64 { get; set; }
             public long VirtualPagedMemorySize64 { get; set; }
         }
 
-        private class HealthCheckEntry
+        public class HealthCheckEntry
         {
             public string? UpdatedOn { get; set; }
             public string? ServiceName { get; set; }
@@ -42,7 +45,7 @@ namespace Hydra4NET
             public double? UptimeSeconds { get; set; }
         }
 
-        private class PresenceNodeEntry
+        public class PresenceNodeEntry
         {
             public string? ServiceName { get; set; }
             public string? ServiceDescription { get; set; }
@@ -50,7 +53,7 @@ namespace Hydra4NET
             public string? InstanceID { get; set; }
             public int ProcessID { get; set; }
             public string? Ip { get; set; }
-            public int Port { get; set; }
+            public string? Port { get; set; }
             public string? HostName { get; set; }
             public string? UpdatedOn { get; set; }
         }
@@ -140,6 +143,63 @@ namespace Hydra4NET
                 await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
             }
         }
+
+        /**
+         * GetPresence
+         * Returns a list of presence entry for the named service.  
+         * If one or more *:presence entries are found in Redis that means 
+         * that one or more instances of the service is available.
+         * For each avaialble *:presence entry this routine grabs a service
+         * directory entry from the hydra:service:nodes hash in Redis and then
+         * builds a list of PresenceNodeEntry entries. The list is then 
+         * randomized (shuffled) and returned.
+         */
+        public async Task<List<PresenceNodeEntry>> GetPresence(string serviceName)
+        {
+            List<string> instanceIds = new();
+            List<PresenceNodeEntry> serviceEntries = new();
+
+            if (_server != null && _db != null)
+            {
+                foreach (var key in _server.Keys(pattern: $"*:{serviceName}:*:presence"))
+                {
+                    // hydra:service:hydra-svcs:9a24557196d643dfb04e2961c405ec40:presence
+                    string segments = key.ToString();
+                    var segmentParts = segments.Split(":");
+                    if (segmentParts.Length > 4)
+                    {
+                        instanceIds.Add(segmentParts[3]);
+                    }                    
+                }
+                foreach (var id in instanceIds)
+                {                   
+                    string? s = await _db.HashGetAsync($"{_redis_pre_key}:nodes", id);
+                    if (s != null)
+                    {
+                        PresenceNodeEntry? presenceNodeEntry = JsonSerializer.Deserialize<PresenceNodeEntry>(s, new JsonSerializerOptions()
+                        {
+                            PropertyNameCaseInsensitive = true,
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                        });
+                        if (presenceNodeEntry != null)
+                        {
+                            serviceEntries.Add(presenceNodeEntry);
+                        }
+                    }
+                }
+                // Shuffle array using (Fisher-Yates shuffle)
+                Random rng = new Random();
+                int n = serviceEntries.Count;
+                while (n > 1)
+                {
+                    n--;
+                    int k = rng.Next(n + 1);
+                    (serviceEntries[n], serviceEntries[k]) = (serviceEntries[k], serviceEntries[n]);
+                }
+            }
+            return serviceEntries;
+        }
+
         #endregion // Presence and Health check handling
     }
 }

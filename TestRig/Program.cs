@@ -40,12 +40,15 @@ hydra.OnMessageHandler(async (string type, string? message) =>
     await Task.Delay(0);
 });
 
+
+// Initialize Hydra using the loaded config file
+await hydra.Init(config);
+
 // Tests
 // hydraTests.CreateUMFMessage();
 // hydraTests.TestUMFParseRoutes();
+await hydraTests.GetPresence("hydra-router");
 
-// Initialize Hydra using the loaded config file
-// and prevent application from closing
-await hydra.Init(config);
+// Prevent app from closing
 await host.RunAsync();
 

@@ -56,7 +56,7 @@ namespace Hydra4NET
         public string? ServiceName { get; private set; }
         public string? ServiceDescription { get; private set; }
         public string? ServiceIP { get; private set; }
-        public int ServicePort { get; private set; }
+        public string? ServicePort { get; private set; }
         public string? ServiceType { get; private set; }
         public string? ServiceVersion { get; private set; }
         public string? HostName { get; private set; }
@@ -92,7 +92,7 @@ namespace Hydra4NET
             ServiceName = config?.Hydra?.ServiceName;
             ServiceDescription = config?.Hydra?.ServiceDescription;
             ServiceType = config?.Hydra?.ServiceType;
-            ServicePort = config?.Hydra?.ServicePort ?? 0;
+            ServicePort = config?.Hydra?.ServicePort.ToString() ?? "";
             ServiceIP = config?.Hydra?.ServiceIP;
             if (ServiceIP == null || ServiceIP == String.Empty)
             {
