@@ -53,6 +53,7 @@ await hydra.Init(config);
 //hydraTests.CreateUMFMessage();
 //hydraTests.TestUMFParseRoutes();
 //await hydraTests.GetPresence("hmr-service");
+await hydraTests.TestMessagingQueuing();
 
 // Prevent app from closing
 await host.RunAsync();

@@ -47,6 +47,19 @@ namespace TestRig
         }
     }
 
+    public class QueueMsgBody
+    {
+        public string JobID { get; set; } = String.Empty;
+        public string JobType { get; set; } = String.Empty;
+        public string JobData { get; set; } = String.Empty;
+    }
+    public class QueueMsg: UMF<QueueMsgBody>
+    {
+    }
+
+
+
+
     public class Tests
     {
         private Hydra _hydra;
@@ -81,6 +94,11 @@ namespace TestRig
         {
             return PingMsg.Deserialize<PingMsg>(json);
         }
+        public QueueMsg? ParseQueueMsg(string json)
+        {
+            return QueueMsg.Deserialize<QueueMsg>(json);
+        }
+
 
         /**
          * UMF route parsing tests
@@ -121,6 +139,31 @@ namespace TestRig
             pingMessage.Typ = "ping";
             string json = pingMessage.Serialize();
             await _hydra.SendMessage(pingMessage.To, json);
+        }
+
+        /** 
+         * Messaging queuing
+         */
+
+        public async Task TestMessagingQueuing()
+        {
+            // Create and queue message
+            QueueMsg queueMessage = new();
+            queueMessage.To = "testrig-svcs:/";
+            queueMessage.Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/";
+            queueMessage.Typ = "job";
+            queueMessage.Bdy.JobID = "1234";
+            queueMessage.Bdy.JobType = "Sample Job";
+            queueMessage.Bdy.JobData = "Test Data";
+            await _hydra.QueueMessage(queueMessage.Serialize());
+
+            // Retrieve queued message (dequeue)
+            string json = await _hydra.GetQueueMessage("testrig-svcs");
+            QueueMsg? qm = ParseQueueMsg(json);
+            Console.WriteLine(qm?.Bdy.JobID);
+
+            // Mark message as processed
+            await _hydra.MarkQueueMessage(json, true);
         }
     }
 }

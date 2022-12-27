@@ -145,3 +145,29 @@ Receiving messages is handled by the `OnMessageHandler` delegate shown above. Se
 Note that we prepare a message object (more about that later) and we serialize it to JSON. Then we call the `hydra.SendMessage` member with a string containing the route to a service followed by the JSON stringified class object. In the case above that's an instance of the `PingMsg` class.
 
 
+## Message queues
+Hydra4Net supports message queues. This is useful for posting messages to a service that may be busy or not be running at the time the message is sent.
+
+Message queue handling is done via the `QueueMessage`, `GetQueueMessage` and `MarkQueueMessage` members.
+
+The following example shows how to use the queueing features of Hydra4Net.
+
+```csharp
+  // Create and queue message
+  QueueMsg queueMessage = new();
+  queueMessage.To = "testrig-svcs:/";
+  queueMessage.Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/";
+  queueMessage.Typ = "job";
+  queueMessage.Bdy.JobID = "1234";
+  queueMessage.Bdy.JobType = "Sample Job";
+  queueMessage.Bdy.JobData = "Test Data";
+  await _hydra.QueueMessage(queueMessage.Serialize());
+
+  // Retrieve queued message (dequeue)
+  string json = await _hydra.GetQueueMessage("testrig-svcs");
+  QueueMsg? qm = ParseQueueMsg(json);
+  Console.WriteLine(qm?.Bdy.JobID);
+
+  // Mark message as processed
+  await _hydra.MarkQueueMessage(json, true);
+```            

@@ -178,6 +178,61 @@ namespace Hydra4NET
             }
         }
 
+        public async Task QueueMessage(string jsonUMFMessage)
+        {
+            UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+            if (umfHeader != null)
+            {
+                UMFRouteEntry entry = UMFBase.ParseRoute(umfHeader.To);
+                if (entry.Error == String.Empty && _db != null)
+                {
+                    await _db.ListLeftPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
+                }
+            }
+        }
+
+        public async Task<String> GetQueueMessage(string serviceName)
+        {
+            string jsonUMFMessage = String.Empty;
+            if (_db != null)
+            {
+                var result = await _db.ListRightPopLeftPushAsync(
+                    $"{_redis_pre_key}:{serviceName}:mqrecieved",
+                    $"{_redis_pre_key}:{serviceName}:mqinprogress"
+                );
+                jsonUMFMessage = (string?)result ?? "";
+            }
+            return jsonUMFMessage;
+        }
+
+        /**
+         * MarkQueueMessage
+         * Message is popped off the "in progress" queue and if the completed
+         * flag is set to false then the message is requeued on the the
+         * "mqrecieved" queue.
+         * 
+         * Note at this time this function does not support a reason code 
+         * for requeuing.
+         */
+        public async Task<String> MarkQueueMessage(string jsonUMFMessage, bool completed)
+        {
+            UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+            if (umfHeader != null && _db != null)
+            {
+                UMFRouteEntry entry = UMFBase.ParseRoute(umfHeader.To);
+                if (entry != null)
+                {
+                    await _db.ListRemoveAsync($"{_redis_pre_key}:{entry.ServiceName}:mqinprogress", jsonUMFMessage, -1);
+                    if (completed == false)
+                    {
+                        // message was not completed, 
+                        await _db.ListRightPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
+                    }
+                }                
+            }
+            return jsonUMFMessage;
+        }
+
         public void Shutdown()
         {
             if (_internalTask != null)
@@ -193,14 +248,19 @@ namespace Hydra4NET
         * ***********************************
         */
 
+        private UMFBase? ExtractUMFHeader(string jsonUMFString)
+        {
+            return JsonSerializer.Deserialize<UMFBase>(jsonUMFString, new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+
         private async Task RegisterService()
         {
-            static string GetType(string jsonString)
+            string GetType(string jsonUMFString)
             {
-                UMFBase? baseUMF = JsonSerializer.Deserialize<UMFBase>(jsonString, new JsonSerializerOptions()
-                {
-                    PropertyNameCaseInsensitive = true
-                });
+                UMFBase? baseUMF = ExtractUMFHeader(jsonUMFString);
                 return (baseUMF != null) ? baseUMF.Typ : "";
             }
 
