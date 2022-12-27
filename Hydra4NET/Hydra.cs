@@ -121,8 +121,54 @@ namespace Hydra4NET
                 _db = _redis.GetDatabase();
                 await RegisterService();
             }
+            else
+            {
+                Console.WriteLine("Warning, ConnectionMultiplexer returned false");
+            }
         }
         #endregion
+
+        /**
+         * SendMessage
+         * Sends a message to a service instance
+         * TODO: Figure out a way to change the function signature to 
+         *       accept a UMF<T> class.  It wasn't clear to me how to
+         *       use generics for this purpose.
+         */
+        public async Task SendMessage(string to, string jsonUMFMessage)
+        {
+            UMFRouteEntry parsedEntry = UMFBase.ParseRoute(to);
+            string instanceId = String.Empty;
+            if (parsedEntry.Instance != String.Empty)
+            {
+                instanceId = parsedEntry.Instance;
+            }
+            else
+            {
+                List<PresenceNodeEntry>? entries = await GetPresence(parsedEntry.ServiceName);
+                if (entries != null && entries.Count > 0)
+                {
+                    // Always select first array entry because
+                    // GetPresence returns a randomized list
+                    instanceId = entries[0].InstanceID ?? "";
+                }
+            }
+            if (instanceId != string.Empty && _redis != null)
+            {
+                ISubscriber sub = _redis.GetSubscriber();
+                await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
+            }
+        }
+
+        public async Task SendBroadcastMessage(string to, string jsonUMFMessage)
+        {
+            UMFRouteEntry parsedEntry = UMFBase.ParseRoute(to);
+            if (_redis != null)
+            {
+                ISubscriber sub = _redis.GetSubscriber();
+                await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}", jsonUMFMessage);
+            }
+        }
 
         public void OnMessageHandler(MessageHandler handler)
         {
@@ -149,6 +195,17 @@ namespace Hydra4NET
 
         private async Task RegisterService()
         {
+            if (_db != null)
+            {
+                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", Serialize(new RegistrationEntry
+                {
+                    ServiceName = ServiceName,
+                    Type = ServiceType,
+                    RegisteredOn = GetTimestamp()
+                }));
+                await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:service", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
+            }
+
             if (_redis != null)
             {
                 ISubscriber subChannel1 = _redis.GetSubscriber();
@@ -171,16 +228,6 @@ namespace Hydra4NET
                         await _MessageHandler(type, msg);
                     }
                 });
-            }
-            if (_db != null)
-            {
-                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", Serialize(new RegistrationEntry
-                {
-                    ServiceName = ServiceName,
-                    Type = ServiceType,
-                    RegisteredOn = GetTimestamp()
-                }));
-                await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:service", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
             }
         }
     }

@@ -36,18 +36,23 @@ hydra.OnMessageHandler(async (string type, string? message) =>
     {
         TestMsg? tm = hydraTests.ParseTestMsg(message ?? "");
         Console.WriteLine($"msg: {tm?.Bdy?.Msg}, id: {tm?.Bdy?.Id}");
+        await hydraTests.SendMessage();
     }
-    await Task.Delay(0);
+    else if (type == "ping")
+    {
+        PingMsg? pm = hydraTests.ParsePingMsg(message ?? "");
+        Console.WriteLine($"message: {pm?.Bdy?.Message}");
+    }
+    await Task.Delay(1);
 });
-
 
 // Initialize Hydra using the loaded config file
 await hydra.Init(config);
 
 // Tests
-// hydraTests.CreateUMFMessage();
-// hydraTests.TestUMFParseRoutes();
-await hydraTests.GetPresence("hydra-router");
+//hydraTests.CreateUMFMessage();
+//hydraTests.TestUMFParseRoutes();
+//await hydraTests.GetPresence("hmr-service");
 
 // Prevent app from closing
 await host.RunAsync();

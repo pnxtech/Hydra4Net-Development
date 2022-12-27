@@ -1,3 +1,4 @@
+using System.Text;
 using Hydra4NET;
 using static Hydra4NET.Hydra;
 
@@ -31,7 +32,21 @@ namespace TestRig
             Typ = "testMsg";
         }
     }
-        
+
+    public class PingMsgBody
+    {
+        public string Message { get; set; } = String.Empty;
+    }
+    public class PingMsg: UMF<PingMsgBody>
+    {
+        public PingMsg()
+        {
+            To = "hmr-service:/";
+            Frm = "TestRig:/";
+            Typ = "ping";
+        }
+    }
+
     public class Tests
     {
         private Hydra _hydra;
@@ -47,7 +62,7 @@ namespace TestRig
 
         public void CreateUMFMessage()
         {
-            TestMsg myUMF = new();
+            TestMsg myUMF = new TestMsg();
             myUMF.Bdy.Msg = "New value";
             myUMF.Bdy.Id = 34;
 
@@ -56,14 +71,20 @@ namespace TestRig
             Console.WriteLine(json);
         }
 
-        /**
-         * UMF route parsing tests
-         **/
 
         public TestMsg? ParseTestMsg(string json)
         {
             return TestMsg.Deserialize<TestMsg>(json);
+
         }
+        public PingMsg? ParsePingMsg(string json)
+        {
+            return PingMsg.Deserialize<PingMsg>(json);
+        }
+
+        /**
+         * UMF route parsing tests
+         **/
 
         public void TestUMFParseRoutes()
         {
@@ -84,8 +105,22 @@ namespace TestRig
             List<PresenceNodeEntry>? entries = await _hydra.GetPresence(serviceName);
             if (entries.Count == 0)
             {
-
             }
         }
+
+
+        /**
+         * Send message
+         */
+
+        public async Task SendMessage()
+        {
+            PingMsg pingMessage = new();
+            pingMessage.To = "hmr-service:/";
+            pingMessage.Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/";
+            pingMessage.Typ = "ping";
+            string json = pingMessage.Serialize();
+            await _hydra.SendMessage(pingMessage.To, json);
+        }
     }
-}   
+}

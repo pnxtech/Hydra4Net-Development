@@ -14,12 +14,28 @@ namespace Hydra4NET
      */
     public class UMFRouteEntry
     {
+        private string error = String.Empty;
         public string Instance { get; set; } = String.Empty;
         public string SubID { get; set; } = String.Empty;
         public string ServiceName { get; set; } = String.Empty;
         public string HttpMethod { get; set; } = String.Empty;
         public string ApiRoute { get; set; } = String.Empty;
-        public string Error { get; set; } = String.Empty;
+        public string Error
+        {
+            get
+            {
+                return error;
+            }
+            set
+            {
+                Instance = String.Empty;
+                SubID = String.Empty;
+                ServiceName = String.Empty;
+                HttpMethod = String.Empty;
+                ApiRoute = String.Empty;
+                error = value;
+            }
+        }
     }
 
     /**
@@ -36,7 +52,7 @@ namespace Hydra4NET
         protected string _Version;
         protected string _Timestamp;
 
-        protected UMFBase()
+        public UMFBase()
         {
             _To ??= String.Empty;
             _From ??= String.Empty;
@@ -82,6 +98,8 @@ namespace Hydra4NET
             set { _Timestamp = value; }
         }
 
+        public object Bdy { get { return new object(); } }
+
         /**
          * GetTimestap()
          * Retreive an ISO 8601 formatted UTC string
@@ -90,20 +108,6 @@ namespace Hydra4NET
         {
             DateTime dateTime = DateTime.Now;
             return dateTime.ToUniversalTime().ToString("u").Replace(" ", "T");
-        }
-
-        /**
-         * FlushRouteEntry
-         * Blank out Parse Route Entry except for Error field
-         */
-        public static UMFRouteEntry FlushRouteEntry(UMFRouteEntry entry)
-        {
-            entry.Instance = String.Empty;
-            entry.SubID = String.Empty;
-            entry.ServiceName = String.Empty;
-            entry.HttpMethod = String.Empty;
-            entry.ApiRoute = String.Empty;        
-            return entry;
         }
 
         /**
@@ -163,13 +167,16 @@ namespace Hydra4NET
                 {
                     routeEntry.HttpMethod = segments[1].Substring(lb + 1, rb - 1);
                     segments[1] = segments[1].Substring(rb + 1);
+                    routeEntry.ApiRoute = segments[1];
+                }
+                else if (lb == -1 && rb == -1)
+                {
+                    routeEntry.ApiRoute = segments[1];
                 }
                 else
                 {
-                    routeEntry = FlushRouteEntry(routeEntry);
                     routeEntry.Error = "route has mismatched http [ or ] brackets";
                 }
-                routeEntry.ApiRoute = segments[1];
             }
             return routeEntry;
         }
@@ -185,7 +192,7 @@ namespace Hydra4NET
     {
         private T _Body;
 
-        public T Bdy 
+        public new T Bdy 
         { 
             get { return _Body; } 
             set { _Body = value; }  

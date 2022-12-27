@@ -1,12 +1,10 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
-using StackExchange.Redis;
 
 /**
  * Hydra Health and Presence module
  * This module implements a periodic timer which retrieves operating 
- * system process stats metrics and periodically writes them to Redis.
+ * system process stats and metrics and periodically writes them to Redis.
  */
 namespace Hydra4NET
 {
@@ -163,7 +161,6 @@ namespace Hydra4NET
             {
                 foreach (var key in _server.Keys(pattern: $"*:{serviceName}:*:presence"))
                 {
-                    // hydra:service:hydra-svcs:9a24557196d643dfb04e2961c405ec40:presence
                     string segments = key.ToString();
                     var segmentParts = segments.Split(":");
                     if (segmentParts.Length > 4)
@@ -187,7 +184,8 @@ namespace Hydra4NET
                         }
                     }
                 }
-                // Shuffle array using (Fisher-Yates shuffle)
+                // Shuffle array using Fisher-Yates shuffle
+                // Leverage tuples for a quick swap ;-)
                 Random rng = new Random();
                 int n = serviceEntries.Count;
                 while (n > 1)

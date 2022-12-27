@@ -9,3 +9,5 @@ Hydra4Net is an .NET implementation of the ideas/methods for building distribute
 This repo is a development environment for Hydra4Net. The TestRig project is a console application which utilizes the Hydra4Net library.
 
 Nuget packaged versions of Hydra4Net are available at: [https://www.nuget.org/packages/Hydra4NET](https://www.nuget.org/packages/Hydra4NET)
+
+Hydra4Net documentation is available [here](./Hydra4NET/README.md).
