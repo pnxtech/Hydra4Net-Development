@@ -142,6 +142,6 @@ Receiving messages is handled by the `OnMessageHandler` delegate shown above. Se
   await _hydra.SendMessage(pingMessage.To, json);
 ```
 
-Note that we prepare a message object (more about that later) and we serialize it to JSON. Then we call the `hydra.SendMessag`e member with a string containing the route to a service followed by the JSON stringified class object. In the case above that's an instance of the `PingMsg` class.
+Note that we prepare a message object (more about that later) and we serialize it to JSON. Then we call the `hydra.SendMessage` member with a string containing the route to a service followed by the JSON stringified class object. In the case above that's an instance of the `PingMsg` class.
 
 

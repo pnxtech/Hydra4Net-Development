@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using StackExchange.Redis;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 /**
  MIT License
@@ -195,6 +195,15 @@ namespace Hydra4NET
 
         private async Task RegisterService()
         {
+            static string GetType(string jsonString)
+            {
+                UMFBase? baseUMF = JsonSerializer.Deserialize<UMFBase>(jsonString, new JsonSerializerOptions()
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return (baseUMF != null) ? baseUMF.Typ : "";
+            }
+
             if (_db != null)
             {
                 await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", Serialize(new RegistrationEntry
@@ -214,18 +223,14 @@ namespace Hydra4NET
                     if (_MessageHandler != null)
                     {
                         string msg = (string?)channelMessage.Message ?? String.Empty;
-                        JObject o = JObject.Parse(msg);
-                        string type = (string?)o["typ"] ?? String.Empty;
-                        await _MessageHandler(type, msg);
+                        await _MessageHandler(GetType(msg), msg);
                     }
                 });
                 subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage => {
                     if (_MessageHandler != null)
                     {
                         string msg = (string?)channelMessage.Message ?? String.Empty;
-                        JObject o = JObject.Parse(msg);
-                        string type = (string?)o["typ"] ?? String.Empty;
-                        await _MessageHandler(type, msg);
+                        await _MessageHandler(GetType(msg), msg);
                     }
                 });
             }

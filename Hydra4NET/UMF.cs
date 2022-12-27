@@ -227,7 +227,6 @@ namespace Hydra4NET
             return JsonSerializer.Deserialize<U>(message, new JsonSerializerOptions() 
             { 
                 PropertyNameCaseInsensitive = true
-                // TODO: test the use of: PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });
         }
     }    
