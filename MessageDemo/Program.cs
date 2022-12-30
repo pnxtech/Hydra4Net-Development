@@ -36,7 +36,8 @@ namespace MessageDemo
 
             // Determine whether this instance of MessageDemo
             // should play the role of a sender or a queuer
-            switch (config?.Hydra?.ServiceType)
+            string role = config?.Hydra?.ServiceType ?? "unknown";
+            switch (role)
             {
                 case "sender":
                     sender = new Sender(hydra);
@@ -50,12 +51,15 @@ namespace MessageDemo
                     break;
             }
 
+            Console.WriteLine($"Service functioning as a {role}");
+            Console.WriteLine();
+
             // Setup an OnMessageHandler to recieve incoming messages
             //
             hydra.OnMessageHandler(async (string type, string? message) =>
             {
                 Console.WriteLine($"{type}: {message}");
-                if (sender != null)
+                if (sender != null && message != null)
                 {
                     sender.ProcessMessage(type, message);
                 }

@@ -49,20 +49,16 @@ namespace MessageDemo
             _hydra = hydra;
         }
 
-        public void ProcessMessage(string type, string? message)
-        {
-            // Messages dispatcher
-            if (message != null)
+        public void ProcessMessage(string type, string message)
+        {            
+            switch (type) // Messages dispatcher
             {
-                switch (type)
-                {
-                    case "command":
-                        ProcessCommandMessage(message);
-                        break;
-                    case "sender":
-                        ProcessSenderMessage(message);
-                        break;
-                }
+                case "command":
+                    ProcessCommandMessage(message);
+                    break;
+                case "sender":
+                    ProcessSenderMessage(message);
+                    break;
             }
         }
 
