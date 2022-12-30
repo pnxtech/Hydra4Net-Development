@@ -4,26 +4,26 @@ using Hydra4NET;
 namespace MessageDemo
 {
 	/**
-		* TestMsgBody
+		* MessageBody
 		* This class represents the body type of a UMF message body's entry
 		*/
-	public class TestMsgBody
+	public class MessageBody
 	{
 			public string? Msg { get; set; }
 			public int? Id { get; set; }
 	}
 
 	/**
-		* TestMsg
-		* This class represents a UMF class with a body type of TestMsgBody.
+		* Message
+		* This class represents a UMF class with a body type of MessageBody.
 		* See the CreateUMFMessage below for an example of how the body is set.
 		*/
-	public class TestMsg: UMF<TestMsgBody>
+	public class Message: UMF<MessageBody>
 	{
 			public TestMsg()
 			{
-					To = "hydra-router:/";
-					Frm = "TestRig:/";
+					To = "queuer-svcs:/";
+					Frm = "sender-svcs:/";
 					Typ = "testMsg";
 			}
 	}
