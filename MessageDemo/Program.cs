@@ -3,13 +3,13 @@ using Microsoft.Extensions.Hosting;
 
 namespace MessageDemo
 {
-    internal class Program
+    class Program
     {
-        Sender? sender = null;
-        Queuer? queuer = null;
-
-        async Task Main(string[] args)
+        static async Task Main(string[] args)
         {
+            Sender? sender = null;
+            Queuer? queuer = null;
+
             // Create an instance of Hydra4Net
             Hydra hydra = new();
 

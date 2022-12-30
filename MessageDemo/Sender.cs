@@ -4,23 +4,35 @@ using Hydra4NET;
 namespace MessageDemo
 {
     /**
-	* MessageBody
-	* This class represents the body type of a UMF message body's entry
-	*/
-    public class MessageBody
+     * CommandMessage and Body
+     * Define Message and Body classes for the Command message
+     */
+    public class CommandMessageBody
+    {
+        public string? Cmd { get; set; }
+    }
+    public class CommandMessage : UMF<CommandMessageBody>
+    {
+        public CommandMessage()
+        {
+            To = "sender-svcs:/";
+            Frm = "external-client:/";
+            Typ = "command";
+        }
+    }
+
+    /**
+     * Message and Body
+     * Define Message and Body classes for the UMF message
+     */
+    public class SenderMessageBody
     {
         public string? Msg { get; set; }
         public int? Id { get; set; }
     }
-
-    /**
-	 * Message
-	 * This class represents a UMF class with a body type of MessageBody.
-	 * See the CreateUMFMessage below for an example of how the body is set.
-	 */
-    public class Message : UMF<MessageBody>
+    public class SenderMessage : UMF<SenderMessageBody>
     {
-        public Message()
+        public SenderMessage()
         {
             To = "queuer-svcs:/";
             Frm = "sender-svcs:/";
@@ -39,7 +51,45 @@ namespace MessageDemo
 
         public void ProcessMessage(string type, string? message)
         {
+            // Messages dispatcher
+            if (message != null)
+            {
+                switch (type)
+                {
+                    case "command":
+                        ProcessCommandMessage(message);
+                        break;
+                    case "sender":
+                        ProcessSenderMessage(message);
+                        break;
+                }
+            }
+        }
+
+        private void ProcessSenderMessage(string message)
+        {
+            SenderMessage? msg = SenderMessage.Deserialize<SenderMessage>(message);
+            if (msg != null)
+            {
+                Console.WriteLine($"Message received: {msg.Bdy?.Msg}");
+            }
+        }
+
+        private void ProcessCommandMessage(string message)
+        {
+            CommandMessage? msg = CommandMessage.Deserialize<CommandMessage>(message);
+            if (msg != null)
+            {
+                switch (msg.Bdy?.Cmd)
+                {
+                    case "start":
+                        Console.WriteLine("Start message recieved!");
+                        break;
+                    case "stop":
+                        // Stop();
+                        break;
+                }
+            }
         }
     }
 }
-
