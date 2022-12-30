@@ -1,0 +1,21 @@
+{
+  "hydra": {
+    "serviceName": "messagedemo-svcs",
+    "serviceIP": "",
+    "servicePort": 12020,
+    "serviceType": "sender",
+    "serviceDescription": "Message sender service",
+    "plugins": {
+      "hydraLogger": {
+        "logToConsole": true,
+        "onlyLogLocally": false
+      }
+    },
+    "redis": {
+      "host": "redis",
+      "port": 6379,
+      "db": 0,
+      "options": "abortConnect=false,connectRetry=3,connectTimeout=5000"
+    }
+  }
+}
