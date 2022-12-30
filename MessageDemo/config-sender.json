@@ -1,6 +1,6 @@
 {
   "hydra": {
-    "serviceName": "messagedemo-svcs",
+    "serviceName": "sender-svcs",
     "serviceIP": "",
     "servicePort": 12020,
     "serviceType": "sender",

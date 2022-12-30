@@ -5,7 +5,10 @@ namespace MessageDemo
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        Sender? sender = null;
+        Queuer? queuer = null;
+
+        async Task Main(string[] args)
         {
             // Create an instance of Hydra4Net
             Hydra hydra = new();
@@ -28,16 +31,36 @@ namespace MessageDemo
                 Environment.Exit(1);
             }
 
-            // Setup an OnMessageHandler to recieve incoming UMF messages
+            // Initialize Hydra using the loaded config file
+            await hydra.Init(config);
+
+            // Determine whether this instance of MessageDemo
+            // should play the role of a sender or a queuer
+            switch (config?.Hydra?.ServiceType)
+            {
+                case "sender":
+                    sender = new Sender(hydra);
+                    break;
+                case "queuer":
+                    queuer = new Queuer(hydra);
+                    break;
+                default:
+                    Console.WriteLine("Hydra config.json doesn't specify a valid ServiceType role");
+                    Environment.Exit(1);
+                    break;
+            }
+
+            // Setup an OnMessageHandler to recieve incoming messages
             //
             hydra.OnMessageHandler(async (string type, string? message) =>
             {
                 Console.WriteLine($"{type}: {message}");
+                if (sender != null)
+                {
+                    sender.ProcessMessage(type, message);
+                }
                 await Task.Delay(1);
             });
-
-            // Initialize Hydra using the loaded config file
-            await hydra.Init(config);
 
             // Prevent app from closing
             await host.RunAsync();
