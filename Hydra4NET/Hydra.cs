@@ -84,7 +84,7 @@ namespace Hydra4NET
         #region Initialization
         public async Task Init(HydraConfigObject config)
         {
-            _internalTask = UpdatePresence();
+            _internalTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting
             HostName = Dns.GetHostName();
             ProcessID = Environment.ProcessId;
             Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");

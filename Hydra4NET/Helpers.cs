@@ -3,22 +3,21 @@
 /**
  * Hydra helper functions
  */
-namespace Hydra4NET
-{
-    public partial class Hydra
-    {
-        private string Serialize(object message)
-        {
-            return JsonSerializer.Serialize(message, new JsonSerializerOptions()
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-        }
+namespace Hydra4NET;
 
-        public static string GetTimestamp()
+public partial class Hydra
+{
+    private string Serialize(object message)
+    {
+        return JsonSerializer.Serialize(message, new JsonSerializerOptions()
         {
-            DateTime dateTime = DateTime.Now;
-            return dateTime.ToUniversalTime().ToString("u").Replace(" ", "T");
-        }
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+    }
+
+    public static string GetTimestamp()
+    {
+        DateTime dateTime = DateTime.Now;
+        return dateTime.ToUniversalTime().ToString("u").Replace(" ", "T");
     }
 }

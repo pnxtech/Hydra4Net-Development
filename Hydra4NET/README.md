@@ -61,13 +61,13 @@ The following additional features are planned:
 
 Replace the following values above:
 
-- replace the `hydra.serviceName` with the name of your service. 
+- Replace the `hydra.serviceName` with the name of your service. 
 - `hydra.serviceIP` is optional and will be auto-detected at run-time by Hydra4Net. 
 - `hydra.servicePort` is the port your service will listen on. Note, that if your service doesn't offer an API or listen on a port then you can set this to 0.
 - `hydra.serviceType` is the type of service you are running. This field is largely for descriptive purposes when reviewing via the optional [HydraRouter](https://github.com/pnxtech/hydra-router) API and messaging gateway or while debugging entries in Redis. This field may be blank.
 - `hydra.serviceDescription` is a description of your service. This field is largely for descriptive purposes for cases similar to those of `hydra.serviceType`.  This field may be blank.
 - You can ignore the `hydra.plugins` branch for now. This is for future use.
-- Update the `hydra.redis` branch with the `host`, `port` and `db` of the Redis server you will use for Hydra4Net. Note the hostname can be an IP address or DNS name.
+- Update the `hydra.redis` branch with the `host`, `port` and `db` of the Redis server you will use for Hydra4Net. Note the hostname can be an IP address or DNS name.  Also you can use a mask pattern to allow Hydra4Net to select from a range of IPs.  To use that specify a pattern such as "10.0.0.*" to restrict IP selection.  Note, this is useful when containerizing your microservice.
 
 3. Ensure that your app is async for Hydra4Net to keep running. In the `testrig` project this is done by using `Microsoft.Extensions.Hosting` as shown here:
 
@@ -144,7 +144,6 @@ Receiving messages is handled by the `OnMessageHandler` delegate shown above. Se
 
 Note that we prepare a message object (more about that later) and we serialize it to JSON. Then we call the `hydra.SendMessage` member with a string containing the route to a service followed by the JSON stringified class object. In the case above that's an instance of the `PingMsg` class.
 
-
 ## Message queues
 Hydra4Net supports message queues. This is useful for posting messages to a service that may be busy or not be running at the time the message is sent.
 
@@ -171,3 +170,25 @@ The following example shows how to use the queueing features of Hydra4Net.
   // Mark message as processed
   await _hydra.MarkQueueMessage(json, true);
 ```            
+
+Because Queue processing can be complicated to probably implement, Hydra4Net offers an optional Queue processor base class called QueueProcessor.
+
+```csharp
+using Hydra4NET;
+
+public class Queuer : QueueProcessor
+{
+    public Queuer(Hydra hydra) : base(hydra)
+    {
+    }
+
+    protected override async Task ProcessMessage(string type, string message)
+    {
+        Console.WriteLine($"Queuer: recieved message of {type}: {message}");
+        await Task.Delay(1);
+    }
+}
+```
+
+Message processing is the same as with `SendMessage` but you're still responsible for calling `MarkQueueMessage()`. 
+Note also that QueueProcessor internally calls the `GetQueueMessage()` and calls your ProcessMessage() member.

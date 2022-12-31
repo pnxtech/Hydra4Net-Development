@@ -1,20 +1,17 @@
 ﻿using Hydra4NET;
-using MessageDemo.Models;
 
-namespace MessageDemo
+namespace MessageDemo;
+
+public class Queuer : QueueProcessor
 {
-	public class Queuer
-	{
-		private Hydra _hydra;
+    public Queuer(Hydra hydra) : base(hydra)
+    {
 
-		public Queuer(Hydra hydra)
-		{
-			_hydra = hydra;
-		}
+    }
 
-        public async Task ProcessMessage(string type, string message)
-        {
-        }
+    protected override async Task ProcessMessage(string type, string message)
+    {
+        Console.WriteLine($"Queuer: recieved message of {type}: {message}");
+        await Task.Delay(1);
     }
 }
-
