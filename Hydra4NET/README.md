@@ -11,6 +11,8 @@ Hydra4Net is under active development and existing functionality may be dramatic
 
 More about Hydra and related open source projects can be found at: https://github.com/pnxtech where other implementations of Hydra for NodeJS, Python and Dart can be found.
 
+For an example of Hydra4Net messaging in action see the [MessageDemo example](https://github.com/pnxtech/Hydra4Net-Development/tree/master/MessageDemo)
+
 Nuget packaged versions of Hydra4Net are available at: [https://www.nuget.org/packages/Hydra4NET](https://www.nuget.org/packages/Hydra4NET)
 
 ## Introduction
@@ -19,16 +21,19 @@ Hydra4Net seeks to support the following features:
 - Extreme ease of use. Just add it to your project and immedidately start benefiting from microservice functionality.
 - Enable your service to be discovered by other services. There's no need to hard code service locations. Additionally, your service can discover other hydra-based services.
   - Using service discovery your service can determine the IP address and port of other services. This is useful for making HTTP (API) requests to other services.
-- Enable your service to send and receive messages to other services. Messages can be sent to a specific service or to a service group.
-- Hydra4Net is built to be compatible with other Hydra implementations. This means that you can use Hydra4Net to communicate with a Hydra service written in NodeJS or Python.
+- Enable your service to send and receive messages to other services. 
+    - Messages can be sent to a specific service or to a service group.
+    - Messages can be queued for a service group.
+- Hydra4Net is built to be compatible with other Hydra implementations. This means that you can use Hydra4Net to communicate with a Hydra service written in NodeJS or Python or Dart.
 
 The following features are offered but not required for use. In production cases these features may be handled by cloud container orchestration services such as Kubernetes or Docker Swarm.
 
 - Enable your service to be monitored for health and presence. This is useful for load balancing and service discovery.
 
-The following additional features are planned:
+### A few words about messaging
+Hydra4Net, as well as any other Hydra implementation, depends on the use of JSON-based messages.  More specifically, JSON messages need to be packed in a format known as UMF - [Universal Messaging Format](https://github.com/pnxtech/umf/blob/master/umf.md).  The reason for this requirement is because UMF has support for messaging routing and queuing - where as plain JSON messages do not. Hydra4Net specifically uses the `short form` UMF.
 
-- Messaging queues. This will allow your service to receive messages for later retrieval due to being busy or not running.
+Hydra4Net has built-in support for UMF via its UMF and UMFBase classes.
 
 ## The basics
 
@@ -192,4 +197,6 @@ public class Queuer : QueueProcessor
 ```
 
 Message processing is the same as with `SendMessage` but you're still responsible for calling `MarkQueueMessage()`. 
-Note also that QueueProcessor internally calls the `GetQueueMessage()` and calls your ProcessMessage() member.
+Note also that QueueProcessor internally calls the `GetQueueMessage()` and calls your ProcessMessage() member. The use of QueueProcessor allows your application to focus on message processing rather than queuing boilerplate code.
+
+

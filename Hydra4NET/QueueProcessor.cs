@@ -41,7 +41,7 @@ public class QueueProcessor
         {
             while (await _timer.WaitForNextTickAsync(_cts.Token))
             {
-                Console.WriteLine($"QueueProcessor: {DateTime.Now.ToString()}");
+                //Console.WriteLine($"QueueProcessor: {DateTime.Now.ToString()}");
 
                 string message = await _hydra.GetQueueMessage(_hydra.ServiceName ?? "");
                 if (message != String.Empty)
@@ -85,15 +85,15 @@ public class QueueProcessor
         switch (_slidingDuration)
         {
             case SlidingDuration.BaseDelay:
-                Console.WriteLine("QueueProcessor: updating from NoDelay to ShortDelay");
+                //Console.WriteLine("QueueProcessor: updating from NoDelay to ShortDelay");
                 _slidingDuration = SlidingDuration.ShortDelay;
                 break;
             case SlidingDuration.ShortDelay:
-                Console.WriteLine("QueueProcessor: updating from ShortDelay to LongerDelay");
+                //Console.WriteLine("QueueProcessor: updating from ShortDelay to LongerDelay");
                 _slidingDuration = SlidingDuration.LongerDelay;
                 break;
             case SlidingDuration.LongerDelay:
-                Console.WriteLine("QueueProcessor: updating from LongerDelay to LongestDelay");
+                //Console.WriteLine("QueueProcessor: updating from LongerDelay to LongestDelay");
                 _slidingDuration = SlidingDuration.LongestDelay;
                 break;
         }

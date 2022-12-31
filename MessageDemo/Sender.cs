@@ -1,72 +1,71 @@
 ﻿using Hydra4NET;
 using MessageDemo.Models;
 
-namespace MessageDemo
+namespace MessageDemo;
+
+public class Sender
 {
-    public class Sender
+    private Hydra _hydra;
+
+    public Sender(Hydra hydra)
     {
-        private Hydra _hydra;
+        _hydra = hydra;
+    }
 
-        public Sender(Hydra hydra)
+    public async Task ProcessMessage(string type, string message)
+    {            
+        switch (type) // Messages dispatcher
         {
-            _hydra = hydra;
+            case "command":
+                await ProcessCommandMessage(message);
+                break;
+            case "sender":
+                ProcessSenderMessage(message);
+                break;
         }
+    }
 
-        public async Task ProcessMessage(string type, string message)
-        {            
-            switch (type) // Messages dispatcher
+    private void ProcessSenderMessage(string message)
+    {
+        SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
+        if (msg != null)
+        {
+            Console.WriteLine($"Message received: {msg.Bdy?.Msg}");
+        }
+    }
+
+    private async Task ProcessCommandMessage(string message)
+    {
+        CommandMessage? msg = CommandMessage.Deserialize<CommandMessage>(message);
+        if (msg != null)
+        {
+            switch (msg.Bdy?.Cmd)
             {
-                case "command":
-                    await ProcessCommandMessage(message);
+                case "start":
+                    Console.WriteLine("Start message recieved, queuing message for Queuer");
+                    await QueueMessageForQueuer();
                     break;
-                case "sender":
-                    ProcessSenderMessage(message);
+                case "stop":
+                    // Stop();
                     break;
             }
         }
+    }
 
-        private void ProcessSenderMessage(string message)
+    private async Task QueueMessageForQueuer()
+    {
+        SharedMessage sharedMessage = new()
         {
-            SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
-            if (msg != null)
+            To = "queuer-svcs:/",
+            Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/",
+            Typ = "queuer",
+            Bdy = new()
             {
-                Console.WriteLine($"Message received: {msg.Bdy?.Msg}");
+                Id = 1,
+                Msg = "Sample job queue message"
             }
-        }
-
-        private async Task ProcessCommandMessage(string message)
-        {
-            CommandMessage? msg = CommandMessage.Deserialize<CommandMessage>(message);
-            if (msg != null)
-            {
-                switch (msg.Bdy?.Cmd)
-                {
-                    case "start":
-                        Console.WriteLine("Start message recieved, queuing message for Queuer");
-                        await QueueMessageForQueuer();
-                        break;
-                    case "stop":
-                        // Stop();
-                        break;
-                }
-            }
-        }
-
-        private async Task QueueMessageForQueuer()
-        {
-            SharedMessage sharedMessage = new()
-            {
-                To = "queuer-svcs:/",
-                Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/",
-                Typ = "queuer",
-                Bdy = new()
-                {
-                    Id = 1,
-                    Msg = "Sample job queue message"
-                }
-            };
-            string json = sharedMessage.Serialize();
-            await _hydra.QueueMessage(json);
-        }
+        };
+        string json = sharedMessage.Serialize();
+        await _hydra.QueueMessage(json);
     }
 }

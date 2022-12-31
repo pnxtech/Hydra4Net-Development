@@ -23,298 +23,297 @@ using System.Text.Json;
  SOFTWARE.
 */
 
-namespace Hydra4NET
+namespace Hydra4NET;
+
+/**
+ * Hydra is the main class for the Hydra4NET library.
+ * It is responsible for initializing the Hydra library and
+ * shutting it down.
+ */
+public partial class Hydra
 {
-    /**
-     * Hydra is the main class for the Hydra4NET library.
-     * It is responsible for initializing the Hydra library and
-     * shutting it down.
-     */
-    public partial class Hydra
+    #region Private Consts
+    private const int _ONE_SECOND = 1;
+    private const int _ONE_WEEK_IN_SECONDS = 604800;
+    private const int _PRESENCE_UPDATE_INTERVAL = _ONE_SECOND;
+    private const int _HEALTH_UPDATE_INTERVAL = _ONE_SECOND * 5;
+    private const int _KEY_EXPIRATION_TTL = _ONE_SECOND * 3;
+    private const string _redis_pre_key = "hydra:service";
+    private const string _mc_message_key = "hydra:service:mc";
+    private const string _INFO = "info";
+    private const string _DEBUG = "debug";
+    private const string _WARN = "warn";
+    private const string _ERROR = "error";
+    private const string _FATAL = "fatal";
+    private const string _TRACE = "trace";
+    #endregion
+
+    #region Class variables 
+    private Task? _internalTask = null;
+    private readonly PeriodicTimer _timer;
+    private int _secondsTick = 1;
+    private readonly CancellationTokenSource _cts = new();
+    public string? ServiceName { get; private set; }
+    public string? ServiceDescription { get; private set; }
+    public string? ServiceIP { get; private set; }
+    public string? ServicePort { get; private set; }
+    public string? ServiceType { get; private set; }
+    public string? ServiceVersion { get; private set; }
+    public string? HostName { get; private set; }
+    public int ProcessID { get; private set; }
+    public string? Architecture { get; private set; }
+    public string? NodeVersion { get; private set; }
+    public string? InstanceID { get; private set; }
+
+    private IServer? _server;
+    private ConnectionMultiplexer? _redis;
+    private IDatabase? _db;
+    #endregion // Class variables
+
+    #region Message delegate
+    public delegate Task MessageHandler(string type, string? message);
+    private MessageHandler? _MessageHandler = null;
+    #endregion // Message delegate
+
+    public Hydra()
     {
-        #region Private Consts
-        private const int _ONE_SECOND = 1;
-        private const int _ONE_WEEK_IN_SECONDS = 604800;
-        private const int _PRESENCE_UPDATE_INTERVAL = _ONE_SECOND;
-        private const int _HEALTH_UPDATE_INTERVAL = _ONE_SECOND * 5;
-        private const int _KEY_EXPIRATION_TTL = _ONE_SECOND * 3;
-        private const string _redis_pre_key = "hydra:service";
-        private const string _mc_message_key = "hydra:service:mc";
-        private const string _INFO = "info";
-        private const string _DEBUG = "debug";
-        private const string _WARN = "warn";
-        private const string _ERROR = "error";
-        private const string _FATAL = "fatal";
-        private const string _TRACE = "trace";
-        #endregion
+        TimeSpan interval = TimeSpan.FromSeconds(_ONE_SECOND);
+        _timer = new PeriodicTimer(interval);
+    }
 
-        #region Class variables 
-        private Task? _internalTask = null;
-        private readonly PeriodicTimer _timer;
-        private int _secondsTick = 1;
-        private readonly CancellationTokenSource _cts = new();
-        public string? ServiceName { get; private set; }
-        public string? ServiceDescription { get; private set; }
-        public string? ServiceIP { get; private set; }
-        public string? ServicePort { get; private set; }
-        public string? ServiceType { get; private set; }
-        public string? ServiceVersion { get; private set; }
-        public string? HostName { get; private set; }
-        public int ProcessID { get; private set; }
-        public string? Architecture { get; private set; }
-        public string? NodeVersion { get; private set; }
-        public string? InstanceID { get; private set; }
-
-        private IServer? _server;
-        private ConnectionMultiplexer? _redis;
-        private IDatabase? _db;
-        #endregion // Class variables
-
-        #region Message delegate
-        public delegate Task MessageHandler(string type, string? message);
-        private MessageHandler? _MessageHandler = null;
-        #endregion // Message delegate
-
-        public Hydra()
+    #region Initialization
+    public async Task Init(HydraConfigObject config)
+    {
+        _internalTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting
+        HostName = Dns.GetHostName();
+        ProcessID = Environment.ProcessId;
+        Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
+        NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+        ServiceName = config?.Hydra?.ServiceName;
+        ServiceDescription = config?.Hydra?.ServiceDescription;
+        ServiceType = config?.Hydra?.ServiceType;
+        ServicePort = config?.Hydra?.ServicePort.ToString() ?? "";
+        ServiceIP = config?.Hydra?.ServiceIP;
+        if (ServiceIP == null || ServiceIP == String.Empty)
         {
-            TimeSpan interval = TimeSpan.FromSeconds(_ONE_SECOND);
-            _timer = new PeriodicTimer(interval);
-        }
-
-        #region Initialization
-        public async Task Init(HydraConfigObject config)
-        {
-            _internalTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting
-            HostName = Dns.GetHostName();
-            ProcessID = Environment.ProcessId;
-            Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
-            NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
-            ServiceName = config?.Hydra?.ServiceName;
-            ServiceDescription = config?.Hydra?.ServiceDescription;
-            ServiceType = config?.Hydra?.ServiceType;
-            ServicePort = config?.Hydra?.ServicePort.ToString() ?? "";
-            ServiceIP = config?.Hydra?.ServiceIP;
-            if (ServiceIP == null || ServiceIP == String.Empty)
+            using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+            socket.Connect("8.8.8.8", 65530);
+            if (socket.LocalEndPoint is IPEndPoint endPoint)
             {
-                using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
-                socket.Connect("8.8.8.8", 65530);
-                if (socket.LocalEndPoint is IPEndPoint endPoint)
-                {
-                    ServiceIP = endPoint.Address.ToString();
-                }
+                ServiceIP = endPoint.Address.ToString();
             }
-            else if (ServiceIP.IndexOf(".") > 0 && ServiceIP.IndexOf("*") > 0)
+        }
+        else if (ServiceIP.IndexOf(".") > 0 && ServiceIP.IndexOf("*") > 0)
+        {
+            // then IP address field specifies a pattern match
+            int starPoint = ServiceIP.IndexOf("*");
+            string pattern = ServiceIP.Substring(0, starPoint);
+            string selectedIP = string.Empty;
+            var myhost = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ipaddr in myhost.AddressList)
             {
-                // then IP address field specifies a pattern match
-                int starPoint = ServiceIP.IndexOf("*");
-                string pattern = ServiceIP.Substring(0, starPoint);
-                string selectedIP = string.Empty;
-                var myhost = Dns.GetHostEntry(Dns.GetHostName());
-                foreach (var ipaddr in myhost.AddressList)
+                if (ipaddr.AddressFamily == AddressFamily.InterNetwork)
                 {
-                    if (ipaddr.AddressFamily == AddressFamily.InterNetwork)
+                    string ip = ipaddr.ToString();
+                    if (ip.StartsWith(pattern))
                     {
-                        string ip = ipaddr.ToString();
-                        if (ip.StartsWith(pattern))
-                        {
-                            selectedIP = ip;
-                            break;
-                        }
+                        selectedIP = ip;
+                        break;
                     }
                 }
-                ServiceIP = selectedIP;
             }
+            ServiceIP = selectedIP;
+        }
 
-            InstanceID = Guid.NewGuid().ToString();
-            InstanceID = InstanceID.Replace("-", "");
+        InstanceID = Guid.NewGuid().ToString();
+        InstanceID = InstanceID.Replace("-", "");
 
-            Console.WriteLine($"{ServiceName} ({InstanceID}) listening on {ServiceIP}");
+        Console.WriteLine($"{ServiceName} ({InstanceID}) listening on {ServiceIP}");
 
-            string connectionString = $"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port},defaultDatabase={config?.Hydra?.Redis?.Db}";
-            if (config?.Hydra?.Redis?.Options != String.Empty)
+        string connectionString = $"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port},defaultDatabase={config?.Hydra?.Redis?.Db}";
+        if (config?.Hydra?.Redis?.Options != String.Empty)
+        {
+            connectionString = $"{connectionString},{config?.Hydra?.Redis?.Options}";
+        }
+        _redis = ConnectionMultiplexer.Connect(connectionString);
+        if (_redis != null)
+        {
+            _server = _redis.GetServer($"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port}");
+            _db = _redis.GetDatabase();
+            await RegisterService();
+        }
+        else
+        {
+            Console.WriteLine("Warning, ConnectionMultiplexer returned false");
+        }
+    }
+    #endregion
+
+    /**
+     * SendMessage
+     * Sends a message to a service instance
+     * TODO: Figure out a way to change the function signature to 
+     *       accept a UMF<T> class.  It wasn't clear to me how to
+     *       use generics for this purpose.
+     */
+    public async Task SendMessage(string to, string jsonUMFMessage)
+    {
+        UMFRouteEntry parsedEntry = UMFBase.ParseRoute(to);
+        string instanceId = String.Empty;
+        if (parsedEntry.Instance != String.Empty)
+        {
+            instanceId = parsedEntry.Instance;
+        }
+        else
+        {
+            List<PresenceNodeEntry>? entries = await GetPresence(parsedEntry.ServiceName);
+            if (entries != null && entries.Count > 0)
             {
-                connectionString = $"{connectionString},{config?.Hydra?.Redis?.Options}";
-            }
-            _redis = ConnectionMultiplexer.Connect(connectionString);
-            if (_redis != null)
-            {
-                _server = _redis.GetServer($"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port}");
-                _db = _redis.GetDatabase();
-                await RegisterService();
-            }
-            else
-            {
-                Console.WriteLine("Warning, ConnectionMultiplexer returned false");
+                // Always select first array entry because
+                // GetPresence returns a randomized list
+                instanceId = entries[0].InstanceID ?? "";
             }
         }
-        #endregion
-
-        /**
-         * SendMessage
-         * Sends a message to a service instance
-         * TODO: Figure out a way to change the function signature to 
-         *       accept a UMF<T> class.  It wasn't clear to me how to
-         *       use generics for this purpose.
-         */
-        public async Task SendMessage(string to, string jsonUMFMessage)
+        if (instanceId != string.Empty && _redis != null)
         {
-            UMFRouteEntry parsedEntry = UMFBase.ParseRoute(to);
-            string instanceId = String.Empty;
-            if (parsedEntry.Instance != String.Empty)
+            ISubscriber sub = _redis.GetSubscriber();
+            await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
+        }
+    }
+
+    public async Task SendBroadcastMessage(string to, string jsonUMFMessage)
+    {
+        UMFRouteEntry parsedEntry = UMFBase.ParseRoute(to);
+        if (_redis != null)
+        {
+            ISubscriber sub = _redis.GetSubscriber();
+            await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}", jsonUMFMessage);
+        }
+    }
+
+    public void OnMessageHandler(MessageHandler handler)
+    {
+        if (handler != null)
+        {
+            _MessageHandler = handler;
+        }
+    }
+
+    public async Task QueueMessage(string jsonUMFMessage)
+    {
+        UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+        if (umfHeader != null)
+        {
+            UMFRouteEntry entry = UMFBase.ParseRoute(umfHeader.To);
+            if (entry.Error == String.Empty && _db != null)
             {
-                instanceId = parsedEntry.Instance;
+                await _db.ListLeftPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
             }
-            else
+        }
+    }
+
+    public async Task<String> GetQueueMessage(string serviceName)
+    {
+        string jsonUMFMessage = String.Empty;
+        if (_db != null)
+        {
+            var result = await _db.ListRightPopLeftPushAsync(
+                $"{_redis_pre_key}:{serviceName}:mqrecieved",
+                $"{_redis_pre_key}:{serviceName}:mqinprogress"
+            );
+            jsonUMFMessage = (string?)result ?? "";
+        }
+        return jsonUMFMessage;
+    }
+
+    /**
+     * MarkQueueMessage
+     * Message is popped off the "in progress" queue and if the completed
+     * flag is set to false then the message is requeued on the the
+     * "mqrecieved" queue.
+     * 
+     * Note at this time this function does not support a reason code 
+     * for requeuing.
+     */
+    public async Task<String> MarkQueueMessage(string jsonUMFMessage, bool completed)
+    {
+        UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+        if (umfHeader != null && _db != null)
+        {
+            UMFRouteEntry entry = UMFBase.ParseRoute(umfHeader.To);
+            if (entry != null)
             {
-                List<PresenceNodeEntry>? entries = await GetPresence(parsedEntry.ServiceName);
-                if (entries != null && entries.Count > 0)
+                await _db.ListRemoveAsync($"{_redis_pre_key}:{entry.ServiceName}:mqinprogress", jsonUMFMessage, -1);
+                if (completed == false)
                 {
-                    // Always select first array entry because
-                    // GetPresence returns a randomized list
-                    instanceId = entries[0].InstanceID ?? "";
+                    // message was not completed, 
+                    await _db.ListRightPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
                 }
-            }
-            if (instanceId != string.Empty && _redis != null)
-            {
-                ISubscriber sub = _redis.GetSubscriber();
-                await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
-            }
+            }                
+        }
+        return jsonUMFMessage;
+    }
+
+    public void Shutdown()
+    {
+        if (_internalTask != null)
+        {
+            _cts.Cancel();
+            //_internalTask;
+            _cts.Dispose();
+        }
+    }
+
+    /** *********************************
+    * [[ INTERNAL AND PRIVATE MEMBERS ]]
+    * ***********************************
+    */
+
+    private UMFBase? ExtractUMFHeader(string jsonUMFString)
+    {
+        return JsonSerializer.Deserialize<UMFBase>(jsonUMFString, new JsonSerializerOptions()
+        {
+            PropertyNameCaseInsensitive = true
+        });
+    }
+
+    private async Task RegisterService()
+    {
+        string GetType(string jsonUMFString)
+        {
+            UMFBase? baseUMF = ExtractUMFHeader(jsonUMFString);
+            return (baseUMF != null) ? baseUMF.Typ : "";
         }
 
-        public async Task SendBroadcastMessage(string to, string jsonUMFMessage)
+        if (_db != null)
         {
-            UMFRouteEntry parsedEntry = UMFBase.ParseRoute(to);
-            if (_redis != null)
+            await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", Serialize(new RegistrationEntry
             {
-                ISubscriber sub = _redis.GetSubscriber();
-                await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}", jsonUMFMessage);
-            }
+                ServiceName = ServiceName,
+                Type = ServiceType,
+                RegisteredOn = GetTimestamp()
+            }));
+            await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:service", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
         }
 
-        public void OnMessageHandler(MessageHandler handler)
+        if (_redis != null)
         {
-            if (handler != null)
-            {
-                _MessageHandler = handler;
-            }
-        }
-
-        public async Task QueueMessage(string jsonUMFMessage)
-        {
-            UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
-            if (umfHeader != null)
-            {
-                UMFRouteEntry entry = UMFBase.ParseRoute(umfHeader.To);
-                if (entry.Error == String.Empty && _db != null)
+            ISubscriber subChannel1 = _redis.GetSubscriber();
+            ISubscriber subChannel2 = _redis.GetSubscriber();
+            subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(async channelMessage => {
+                if (_MessageHandler != null)
                 {
-                    await _db.ListLeftPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
+                    string msg = (string?)channelMessage.Message ?? String.Empty;
+                    await _MessageHandler(GetType(msg), msg);
                 }
-            }
-        }
-
-        public async Task<String> GetQueueMessage(string serviceName)
-        {
-            string jsonUMFMessage = String.Empty;
-            if (_db != null)
-            {
-                var result = await _db.ListRightPopLeftPushAsync(
-                    $"{_redis_pre_key}:{serviceName}:mqrecieved",
-                    $"{_redis_pre_key}:{serviceName}:mqinprogress"
-                );
-                jsonUMFMessage = (string?)result ?? "";
-            }
-            return jsonUMFMessage;
-        }
-
-        /**
-         * MarkQueueMessage
-         * Message is popped off the "in progress" queue and if the completed
-         * flag is set to false then the message is requeued on the the
-         * "mqrecieved" queue.
-         * 
-         * Note at this time this function does not support a reason code 
-         * for requeuing.
-         */
-        public async Task<String> MarkQueueMessage(string jsonUMFMessage, bool completed)
-        {
-            UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
-            if (umfHeader != null && _db != null)
-            {
-                UMFRouteEntry entry = UMFBase.ParseRoute(umfHeader.To);
-                if (entry != null)
-                {
-                    await _db.ListRemoveAsync($"{_redis_pre_key}:{entry.ServiceName}:mqinprogress", jsonUMFMessage, -1);
-                    if (completed == false)
-                    {
-                        // message was not completed, 
-                        await _db.ListRightPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
-                    }
-                }                
-            }
-            return jsonUMFMessage;
-        }
-
-        public void Shutdown()
-        {
-            if (_internalTask != null)
-            {
-                _cts.Cancel();
-                //_internalTask;
-                _cts.Dispose();
-            }
-        }
-
-        /** *********************************
-        * [[ INTERNAL AND PRIVATE MEMBERS ]]
-        * ***********************************
-        */
-
-        private UMFBase? ExtractUMFHeader(string jsonUMFString)
-        {
-            return JsonSerializer.Deserialize<UMFBase>(jsonUMFString, new JsonSerializerOptions()
-            {
-                PropertyNameCaseInsensitive = true
             });
-        }
-
-        private async Task RegisterService()
-        {
-            string GetType(string jsonUMFString)
-            {
-                UMFBase? baseUMF = ExtractUMFHeader(jsonUMFString);
-                return (baseUMF != null) ? baseUMF.Typ : "";
-            }
-
-            if (_db != null)
-            {
-                await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", Serialize(new RegistrationEntry
+            subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage => {
+                if (_MessageHandler != null)
                 {
-                    ServiceName = ServiceName,
-                    Type = ServiceType,
-                    RegisteredOn = GetTimestamp()
-                }));
-                await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:service", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
-            }
-
-            if (_redis != null)
-            {
-                ISubscriber subChannel1 = _redis.GetSubscriber();
-                ISubscriber subChannel2 = _redis.GetSubscriber();
-                subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(async channelMessage => {
-                    if (_MessageHandler != null)
-                    {
-                        string msg = (string?)channelMessage.Message ?? String.Empty;
-                        await _MessageHandler(GetType(msg), msg);
-                    }
-                });
-                subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage => {
-                    if (_MessageHandler != null)
-                    {
-                        string msg = (string?)channelMessage.Message ?? String.Empty;
-                        await _MessageHandler(GetType(msg), msg);
-                    }
-                });
-            }
+                    string msg = (string?)channelMessage.Message ?? String.Empty;
+                    await _MessageHandler(GetType(msg), msg);
+                }
+            });
         }
     }
 }
