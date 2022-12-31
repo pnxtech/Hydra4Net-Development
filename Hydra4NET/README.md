@@ -171,7 +171,8 @@ The following example shows how to use the queueing features of Hydra4Net.
   await _hydra.MarkQueueMessage(json, true);
 ```            
 
-Because Queue processing can be complicated to probably implement, Hydra4Net offers an optional Queue processor base class called QueueProcessor.
+Because Queue processing can be complicated to properly implement, Hydra4Net offers an optional aptly named QueueProcessor base class.
+QueueProcesor runs in the background and performed message dequeuing using an Exponential backoff algorithm. So, when there are messages in a queue, QueueProcessor operators faster than when there are no messages available.
 
 ```csharp
 using Hydra4NET;
