@@ -1,7 +1,7 @@
 {
   "hydra": {
     "serviceName": "testrig-svcs",
-    "serviceIP": "",
+    "serviceIP": "10.0.0.*",
     "servicePort": 12018,
     "serviceType": "test",
     "serviceDescription": "Dotnet-based experimental service",

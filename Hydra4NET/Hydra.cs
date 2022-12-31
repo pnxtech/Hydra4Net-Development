@@ -103,6 +103,27 @@ namespace Hydra4NET
                     ServiceIP = endPoint.Address.ToString();
                 }
             }
+            else if (ServiceIP.IndexOf(".") > 0 && ServiceIP.IndexOf("*") > 0)
+            {
+                // then IP address field specifies a pattern match
+                int starPoint = ServiceIP.IndexOf("*");
+                string pattern = ServiceIP.Substring(0, starPoint);
+                string selectedIP = string.Empty;
+                var myhost = Dns.GetHostEntry(Dns.GetHostName());
+                foreach (var ipaddr in myhost.AddressList)
+                {
+                    if (ipaddr.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        string ip = ipaddr.ToString();
+                        if (ip.StartsWith(pattern))
+                        {
+                            selectedIP = ip;
+                            break;
+                        }
+                    }
+                }
+                ServiceIP = selectedIP;
+            }
 
             InstanceID = Guid.NewGuid().ToString();
             InstanceID = InstanceID.Replace("-", "");
