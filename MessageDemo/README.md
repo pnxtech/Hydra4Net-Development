@@ -13,7 +13,6 @@ redis-cli
 
 ### List PubSub channels
 ```
-pubsub channels
 pubsub channels *sender*
 ```
 
