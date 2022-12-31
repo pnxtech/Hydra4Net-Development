@@ -2,8 +2,6 @@
 
 
 
----
-
 ## RAW Redis CLI comands
 Using the Docker Desktop dashboard, open a terminal to the Redis container connect to the Redis CLI.
 
