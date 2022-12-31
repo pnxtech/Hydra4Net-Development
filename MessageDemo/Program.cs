@@ -61,9 +61,8 @@ namespace MessageDemo
                 Console.WriteLine($"{type}: {message}");
                 if (sender != null && message != null)
                 {
-                    sender.ProcessMessage(type, message);
+                    await sender.ProcessMessage(type, message);
                 }
-                await Task.Delay(1);
             });
 
             // Prevent app from closing

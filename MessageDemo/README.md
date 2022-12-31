@@ -16,7 +16,7 @@ pubsub channels *sender*
 
 ### Subscribe to a channel
 ```
-subscribe hydra:service:mc:sender-svcs, hydra:service:mc:sender-svcs:13d2f9a301274b0aa75300d1cf27f69b
+subscribe hydra:service:mc:sender-svcs, hydra:service:mc:sender-svcs:19e52523914f49d5859e8106a70a5b45
 ```
 
 ### Send a message to a channel
@@ -34,7 +34,7 @@ subscribe hydra:service:mc:sender-svcs, hydra:service:mc:sender-svcs:13d2f9a3012
 Above message has to be sent as an escaped JSON string
 
 ```
-publish "hydra:service:mc:sender-svcs:13d2f9a301274b0aa75300d1cf27f69b" "{\"to\":\"85d02978c67c4f27aa12f39bdb5ea53d@sender-svcs:/\",\"frm\":\"external-client:/\",\"mid\":\"fe60ba9b-84ed-43be-90cd-a5f6eaa43f87\",\"ts\":\"2022-12-30T23:17:00.601Z\",\"typ\":\"command\",\"ver\":\"UMF/1.4.6\",\"via\":\"37528e822e70454cae2a2aa33643d791-1f7ljdkwrkz@hydra-router:/\",\"bdy\":{\"cmd\":\"start\"}}"
+publish "hydra:service:mc:sender-svcs:19e52523914f49d5859e8106a70a5b45" "{\"to\":\"85d02978c67c4f27aa12f39bdb5ea53d@sender-svcs:/\",\"frm\":\"external-client:/\",\"mid\":\"fe60ba9b-84ed-43be-90cd-a5f6eaa43f87\",\"ts\":\"2022-12-30T23:17:00.601Z\",\"typ\":\"command\",\"ver\":\"UMF/1.4.6\",\"via\":\"37528e822e70454cae2a2aa33643d791-1f7ljdkwrkz@hydra-router:/\",\"bdy\":{\"cmd\":\"start\"}}"
 ```
 
 

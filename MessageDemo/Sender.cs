@@ -1,45 +1,8 @@
-﻿using System;
-using Hydra4NET;
+﻿using Hydra4NET;
+using MessageDemo.Models;
 
 namespace MessageDemo
 {
-    /**
-     * CommandMessage and Body
-     * Define Message and Body classes for the Command message
-     */
-    public class CommandMessageBody
-    {
-        public string? Cmd { get; set; }
-    }
-    public class CommandMessage : UMF<CommandMessageBody>
-    {
-        public CommandMessage()
-        {
-            To = "sender-svcs:/";
-            Frm = "external-client:/";
-            Typ = "command";
-        }
-    }
-
-    /**
-     * Message and Body
-     * Define Message and Body classes for the UMF message
-     */
-    public class SenderMessageBody
-    {
-        public string? Msg { get; set; }
-        public int? Id { get; set; }
-    }
-    public class SenderMessage : UMF<SenderMessageBody>
-    {
-        public SenderMessage()
-        {
-            To = "queuer-svcs:/";
-            Frm = "sender-svcs:/";
-            Typ = "sender";
-        }
-    }
-
     public class Sender
     {
         private Hydra _hydra;
@@ -49,12 +12,12 @@ namespace MessageDemo
             _hydra = hydra;
         }
 
-        public void ProcessMessage(string type, string message)
+        public async Task ProcessMessage(string type, string message)
         {            
             switch (type) // Messages dispatcher
             {
                 case "command":
-                    ProcessCommandMessage(message);
+                    await ProcessCommandMessage(message);
                     break;
                 case "sender":
                     ProcessSenderMessage(message);
@@ -64,14 +27,14 @@ namespace MessageDemo
 
         private void ProcessSenderMessage(string message)
         {
-            SenderMessage? msg = SenderMessage.Deserialize<SenderMessage>(message);
+            SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
             if (msg != null)
             {
                 Console.WriteLine($"Message received: {msg.Bdy?.Msg}");
             }
         }
 
-        private void ProcessCommandMessage(string message)
+        private async Task ProcessCommandMessage(string message)
         {
             CommandMessage? msg = CommandMessage.Deserialize<CommandMessage>(message);
             if (msg != null)
@@ -79,13 +42,31 @@ namespace MessageDemo
                 switch (msg.Bdy?.Cmd)
                 {
                     case "start":
-                        Console.WriteLine("Start message recieved!");
+                        Console.WriteLine("Start message recieved, queuing message for Queuer");
+                        await QueueMessageForQueuer();
                         break;
                     case "stop":
                         // Stop();
                         break;
                 }
             }
+        }
+
+        private async Task QueueMessageForQueuer()
+        {
+            SharedMessage sharedMessage = new()
+            {
+                To = "queuer-svcs:/",
+                Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/",
+                Typ = "queuer",
+                Bdy = new()
+                {
+                    Id = 1,
+                    Msg = "Sample job queue message"
+                }
+            };
+            string json = sharedMessage.Serialize();
+            await _hydra.QueueMessage(json);
         }
     }
 }

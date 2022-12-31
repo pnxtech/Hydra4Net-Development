@@ -1,5 +1,5 @@
-﻿using System;
-using Hydra4NET;
+﻿using Hydra4NET;
+using MessageDemo.Models;
 
 namespace MessageDemo
 {
@@ -12,9 +12,9 @@ namespace MessageDemo
 			_hydra = hydra;
 		}
 
-		public void ProcessMessage()
-		{
-		}
-	}
+        public async Task ProcessMessage(string type, string message)
+        {
+        }
+    }
 }
 
