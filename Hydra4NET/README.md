@@ -1,6 +1,6 @@
-﻿# Hydra4NET
+# Hydra4NET
 
-![logo](./Hydra4Net-icon.png)
+<img width="300" alt="Hydra4Net" src="https://user-images.githubusercontent.com/387129/210153567-ffd66c5a-6e15-438a-a1a7-46a7f3ae1b0a.png">
 
 Hydra for .NET is a library module for building Dotnet microservices.
 
