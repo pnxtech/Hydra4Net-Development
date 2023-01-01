@@ -30,7 +30,7 @@ public class Sender
         SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
         if (msg != null)
         {
-            Console.WriteLine($"Message received: {msg.Bdy?.Msg}");
+            Console.WriteLine($"Sender: message received: {msg.Bdy?.Msg}");
         }
     }
 
@@ -42,11 +42,8 @@ public class Sender
             switch (msg.Bdy?.Cmd)
             {
                 case "start":
-                    Console.WriteLine("Start message recieved, queuing message for Queuer");
+                    Console.WriteLine("Sender: start message recieved, queuing message for Queuer");
                     await QueueMessageForQueuer();
-                    break;
-                case "stop":
-                    // Stop();
                     break;
             }
         }

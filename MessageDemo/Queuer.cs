@@ -14,7 +14,7 @@ public class Queuer : QueueProcessor
 
     protected override async Task ProcessMessage(string type, string message)
     {
-        Console.WriteLine($"Queuer: recieved message of {type}: {message}");
+        Console.WriteLine("Queuer: recieved message");
         if (type == "queuer")
         {
             SharedMessage? sm = SharedMessage.Deserialize<SharedMessage>(message);
@@ -32,7 +32,7 @@ public class Queuer : QueueProcessor
                         Bdy = new()
                         {
                             Id = Id,
-                            Msg = $"Recieved and processed your {Id} message containing {Msg}"
+                            Msg = $"Queuer: processed {Id} message containing {Msg}"
                         }
                     };
                     string json = sharedMessage.Serialize();
