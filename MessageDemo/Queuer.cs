@@ -14,9 +14,10 @@ public class Queuer : QueueProcessor
 
     protected override async Task ProcessMessage(string type, string message)
     {
-        Console.WriteLine("Queuer: recieved message");
+        Console.WriteLine("Queuer: retrieved message from queue");
         if (type == "queuer")
         {
+            Console.WriteLine($"Queuer: processing queued message from sender");
             SharedMessage? sm = SharedMessage.Deserialize<SharedMessage>(message);
             if (sm != null)
             {
@@ -28,16 +29,17 @@ public class Queuer : QueueProcessor
                     {
                         To = "sender-svcs:/",
                         Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/",
-                        Typ = "sender",
+                        Typ = "complete",
                         Bdy = new()
                         {
                             Id = Id,
-                            Msg = $"Queuer: processed {Id} message containing {Msg}"
+                            Msg = $"Queuer: processed message containing {Msg} with ID of {Id}"
                         }
                     };
                     string json = sharedMessage.Serialize();
-                    await _hydra.SendMessage(sharedMessage.To, json);
                     await _hydra.MarkQueueMessage(message, true);
+                    await _hydra.SendMessage(sharedMessage.To, json);
+                    Console.WriteLine($"Queuer: sent completion message back to sender");
                 }
             }
         }

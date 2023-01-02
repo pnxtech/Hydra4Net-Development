@@ -16,21 +16,12 @@ public class Sender
     {            
         switch (type) // Messages dispatcher
         {
-            case "command":
+            case "start":
                 await ProcessCommandMessage(message);
                 break;
-            case "sender":
+            case "complete":
                 ProcessSenderMessage(message);
                 break;
-        }
-    }
-
-    private void ProcessSenderMessage(string message)
-    {
-        SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
-        if (msg != null)
-        {
-            Console.WriteLine($"Sender: message received: {msg.Bdy?.Msg}");
         }
     }
 
@@ -42,10 +33,19 @@ public class Sender
             switch (msg.Bdy?.Cmd)
             {
                 case "start":
-                    Console.WriteLine("Sender: start message recieved, queuing message for Queuer");
+                    Console.WriteLine("Sender: queuing message for Queuer");
                     await QueueMessageForQueuer();
                     break;
             }
+        }
+    }
+
+    private void ProcessSenderMessage(string message)
+    {
+        SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
+        if (msg != null)
+        {
+            Console.WriteLine($"Sender: message received {msg.Bdy?.Msg}");
         }
     }
 
