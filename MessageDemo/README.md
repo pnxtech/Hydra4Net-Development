@@ -7,6 +7,53 @@ The app support functioning as a sender and queuer based on the settings in the 
 ## Message Demo state diagram
 ![](messaging-uml.jpg)
 
+Agent (us) sends the following message to `sender` to initiate the demo
+
+```json
+{
+    "to":"sender-svcs:/",
+    "frm": "external-client:/",
+    "typ": "start",
+    "bdy": {
+        "cmd": "start"
+    }
+}
+```
+
+Upon receiving the above message `sender` queues the following message for the `queuer` service:
+
+```json
+{
+    "to":"queuer-svcs:/",
+    "frm": "sender-svcs:/",
+    "typ": "queuer",
+    "bdy": {
+        "id": 1,
+        "msg": "Sample job queue message"
+    }
+}
+```
+
+The `queuer` retrieves the message from its message queue, then processes the message and performs a send message back to the sender with the following message:
+
+```json
+{
+    "to":"sender-svcs:/",
+    "frm": "queuer-svcs:/",
+    "typ": "complete",
+    "bdy": {
+        "id": 1,
+        "msg": "Queuer: processed message containing Msg with ID of 1"
+    }
+}
+```
+
+
+
+
+
+---
+
 ## RAW Redis CLI comands
 Using the Docker Desktop dashboard, open a terminal to the Redis container and connect to the Redis CLI from the terminal prompt.
 
