@@ -1,6 +1,11 @@
 # Message Demo App
 
+The Message Demo App demonstrates the use of Hydra4Net's SendMessage() functionality and the message queuing functionality.
 
+The app support functioning as a sender and queuer based on the settings in the config.json file.
+
+## Message Demo state diagram
+![](messaging-uml.jpg)
 
 ## RAW Redis CLI comands
 Using the Docker Desktop dashboard, open a terminal to the Redis container and connect to the Redis CLI from the terminal prompt.
