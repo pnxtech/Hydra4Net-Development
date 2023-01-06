@@ -137,8 +137,10 @@ public class Tests
         pingMessage.To = "hmr-service:/";
         pingMessage.Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/";
         pingMessage.Typ = "ping";
-        string json = pingMessage.Serialize();
-        await _hydra.SendMessage(pingMessage.To, json);
+        //string json = pingMessage.Serialize();
+        //await _hydra.SendMessage(pingMessage.To, json);
+        await _hydra.SendMessage(pingMessage);
+
     }
 
     /** 

@@ -30,7 +30,7 @@ namespace Hydra4NET;
  * It is responsible for initializing the Hydra library and
  * shutting it down.
  */
-public partial class Hydra
+public partial class Hydra : IHydra
 {
     #region Private Consts
     private const int _ONE_SECOND = 1;
@@ -70,30 +70,38 @@ public partial class Hydra
     private IDatabase? _db;
     #endregion // Class variables
 
+    // Storing it as a property  allows easier DI IMO.  we should probably pick either contructor or init though
+    HydraConfigObject _config;
     #region Message delegate
     public delegate Task MessageHandler(string type, string? message);
     private MessageHandler? _MessageHandler = null;
     #endregion // Message delegate
 
-    public Hydra()
+    public Hydra(HydraConfigObject config = null)
     {
         TimeSpan interval = TimeSpan.FromSeconds(_ONE_SECOND);
         _timer = new PeriodicTimer(interval);
+        _config = config;
     }
 
+
+
     #region Initialization
-    public async Task Init(HydraConfigObject config)
+    public async Task Init(HydraConfigObject config = null)
     {
+        if (config != null)
+            _config = config;
+        //probably throw if no config passed or invalid??
         _internalTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting
         HostName = Dns.GetHostName();
         ProcessID = Environment.ProcessId;
         Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
         NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
-        ServiceName = config?.Hydra?.ServiceName;
-        ServiceDescription = config?.Hydra?.ServiceDescription;
-        ServiceType = config?.Hydra?.ServiceType;
-        ServicePort = config?.Hydra?.ServicePort.ToString() ?? "";
-        ServiceIP = config?.Hydra?.ServiceIP;
+        ServiceName = _config?.Hydra?.ServiceName;
+        ServiceDescription = _config?.Hydra?.ServiceDescription;
+        ServiceType = _config?.Hydra?.ServiceType;
+        ServicePort = _config?.Hydra?.ServicePort.ToString() ?? "";
+        ServiceIP = _config?.Hydra?.ServiceIP;
         if (ServiceIP == null || ServiceIP == String.Empty)
         {
             using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
@@ -103,7 +111,7 @@ public partial class Hydra
                 ServiceIP = endPoint.Address.ToString();
             }
         }
-        else if (ServiceIP.IndexOf(".") > 0 && ServiceIP.IndexOf("*") > 0)
+        else if (ServiceIP.Contains(".") && ServiceIP.Contains("*"))
         {
             // then IP address field specifies a pattern match
             int starPoint = ServiceIP.IndexOf("*");
@@ -128,17 +136,18 @@ public partial class Hydra
         InstanceID = Guid.NewGuid().ToString();
         InstanceID = InstanceID.Replace("-", "");
 
+        //wed probably want some kind of log output instead of directly to console.  We could have an inbuild console option (eg via the plugin) or custom log sinks (eg asp core's ILogger)
         Console.WriteLine($"{ServiceName} ({InstanceID}) listening on {ServiceIP}");
 
-        string connectionString = $"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port},defaultDatabase={config?.Hydra?.Redis?.Db}";
-        if (config?.Hydra?.Redis?.Options != String.Empty)
+        string connectionString = $"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port},defaultDatabase={_config?.Hydra?.Redis?.Db}";
+        if (_config?.Hydra?.Redis?.Options != String.Empty)
         {
-            connectionString = $"{connectionString},{config?.Hydra?.Redis?.Options}";
+            connectionString = $"{connectionString},{_config?.Hydra?.Redis?.Options}";
         }
         _redis = ConnectionMultiplexer.Connect(connectionString);
         if (_redis != null)
         {
-            _server = _redis.GetServer($"{config?.Hydra?.Redis?.Host}:{config?.Hydra?.Redis?.Port}");
+            _server = _redis.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
             _db = _redis.GetDatabase();
             await RegisterService();
         }
@@ -156,9 +165,14 @@ public partial class Hydra
      *       accept a UMF<T> class.  It wasn't clear to me how to
      *       use generics for this purpose.
      */
-    public async Task SendMessage(string to, string jsonUMFMessage)
+    public Task SendMessage(string to, string jsonUMFMessage)
+        => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
+
+    public Task SendMessage<T>(UMF<T> message) where T : class, new()
+        => SendMessage(message.GetRouteEntry(), message.Serialize());
+
+    private async Task SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
     {
-        UMFRouteEntry parsedEntry = UMFBase.ParseRoute(to);
         string instanceId = String.Empty;
         if (parsedEntry.Instance != String.Empty)
         {
@@ -249,19 +263,29 @@ public partial class Hydra
                     // message was not completed, 
                     await _db.ListRightPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
                 }
-            }                
+            }
         }
         return jsonUMFMessage;
     }
 
     public void Shutdown()
     {
-        if (_internalTask != null)
+        try
         {
-            _cts.Cancel();
-            //_internalTask;
-            _cts.Dispose();
+            if (_internalTask != null)
+            {
+                if (!_cts.IsCancellationRequested)
+                {
+                    _cts.Cancel();
+                    //_internalTask;
+                    _cts.Dispose();
+                }          
+            }
+            _redis?.Dispose();
+            _timer?.Dispose();
         }
+        catch { }
+      
     }
 
     /** *********************************
@@ -300,14 +324,16 @@ public partial class Hydra
         {
             ISubscriber subChannel1 = _redis.GetSubscriber();
             ISubscriber subChannel2 = _redis.GetSubscriber();
-            subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(async channelMessage => {
+            subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(async channelMessage =>
+            {
                 if (_MessageHandler != null)
                 {
                     string msg = (string?)channelMessage.Message ?? String.Empty;
                     await _MessageHandler(GetType(msg), msg);
                 }
             });
-            subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage => {
+            subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage =>
+            {
                 if (_MessageHandler != null)
                 {
                     string msg = (string?)channelMessage.Message ?? String.Empty;

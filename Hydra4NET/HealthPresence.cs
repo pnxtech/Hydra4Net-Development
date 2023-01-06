@@ -8,7 +8,7 @@ using System.Text.Json;
  */
 namespace Hydra4NET;
 
-public partial class Hydra
+public partial class Hydra : IDisposable
 {
     #region Entry classses
     public class RegistrationEntry
@@ -196,6 +196,11 @@ public partial class Hydra
             }
         }
         return serviceEntries;
+    }
+
+    public void Dispose()
+    {
+        Shutdown();
     }
 
     #endregion // Presence and Health check handling
