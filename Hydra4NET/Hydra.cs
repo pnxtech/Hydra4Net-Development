@@ -73,8 +73,10 @@ public partial class Hydra : IHydra
     // Storing it as a property  allows easier DI IMO.  we should probably pick either contructor or init though
     HydraConfigObject _config;
     #region Message delegate
-    public delegate Task MessageHandler(string type, string? message);
+    public delegate Task MessageHandler(string type, string? message); 
+    public delegate Task UMFHandler(UMF? umf, string type, string? message);
     private MessageHandler? _MessageHandler = null;
+    private UMFHandler? _UmfHandler = null;
     #endregion // Message delegate
 
     public Hydra(HydraConfigObject config = null)
@@ -168,7 +170,7 @@ public partial class Hydra : IHydra
     public Task SendMessage(string to, string jsonUMFMessage)
         => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
-    public Task SendMessage<T>(UMF<T> message) where T : class, new()
+    public Task SendMessage<T>(UMF<T> message) where T :  new()
         => SendMessage(message.GetRouteEntry(), message.Serialize());
 
     private async Task SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
@@ -212,18 +214,31 @@ public partial class Hydra : IHydra
             _MessageHandler = handler;
         }
     }
+    //this is just an idea for better typing
+    public void OnMessageHandler(UMFHandler handler)
+    {
+        if (handler != null)
+        {
+            _UmfHandler = handler;
+        }
+    }
 
-    public async Task QueueMessage(string jsonUMFMessage)
+    public async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
+    {
+        if (entry.Error == string.Empty && _db != null)
+        {
+            await _db.ListLeftPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
+        }
+    }
+
+    public Task QueueMessage<T>(UMF<T> umfHeader) where T : new() =>
+        QueueMessage(umfHeader?.GetRouteEntry(), umfHeader?.Serialize() ?? "");
+
+
+    public Task QueueMessage(string jsonUMFMessage)     
     {
         UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
-        if (umfHeader != null)
-        {
-            UMFRouteEntry entry = UMFBase.ParseRoute(umfHeader.To);
-            if (entry.Error == String.Empty && _db != null)
-            {
-                await _db.ListLeftPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
-            }
-        }
+        return QueueMessage(umfHeader?.GetRouteEntry(), jsonUMFMessage);
     }
 
     public async Task<String> GetQueueMessage(string serviceName)
@@ -254,7 +269,7 @@ public partial class Hydra : IHydra
         UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
         if (umfHeader != null && _db != null)
         {
-            UMFRouteEntry entry = UMFBase.ParseRoute(umfHeader.To);
+            UMFRouteEntry entry = umfHeader.GetRouteEntry();
             if (entry != null)
             {
                 await _db.ListRemoveAsync($"{_redis_pre_key}:{entry.ServiceName}:mqinprogress", jsonUMFMessage, -1);
@@ -293,22 +308,37 @@ public partial class Hydra : IHydra
     * ***********************************
     */
 
-    private UMFBase? ExtractUMFHeader(string jsonUMFString)
+    static UMFBase? ExtractUMFHeader(string jsonUMFString)
     {
         return JsonSerializer.Deserialize<UMFBase>(jsonUMFString, new JsonSerializerOptions()
         {
             PropertyNameCaseInsensitive = true
         });
     }
+    static string GetType(string jsonUMFString)
+    {
+        UMFBase? baseUMF = ExtractUMFHeader(jsonUMFString);
+        return (baseUMF != null) ? baseUMF.Typ : "";
+    }
+
+    async Task HandleMessage(ChannelMessage channelMessage)
+    {
+        string msg = (string?)channelMessage.Message ?? String.Empty;
+        var type = GetType(msg);
+        //we should probably pick one or the other
+        if (_MessageHandler != null)
+        {
+            await _MessageHandler(type , msg);
+        }
+        if (_UmfHandler != null)
+        {
+            var umf = UMF.Deserialize(msg);
+            await _UmfHandler(umf, type, msg);
+        }
+    }
 
     private async Task RegisterService()
     {
-        string GetType(string jsonUMFString)
-        {
-            UMFBase? baseUMF = ExtractUMFHeader(jsonUMFString);
-            return (baseUMF != null) ? baseUMF.Typ : "";
-        }
-
         if (_db != null)
         {
             await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", Serialize(new RegistrationEntry
@@ -324,22 +354,8 @@ public partial class Hydra : IHydra
         {
             ISubscriber subChannel1 = _redis.GetSubscriber();
             ISubscriber subChannel2 = _redis.GetSubscriber();
-            subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(async channelMessage =>
-            {
-                if (_MessageHandler != null)
-                {
-                    string msg = (string?)channelMessage.Message ?? String.Empty;
-                    await _MessageHandler(GetType(msg), msg);
-                }
-            });
-            subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(async channelMessage =>
-            {
-                if (_MessageHandler != null)
-                {
-                    string msg = (string?)channelMessage.Message ?? String.Empty;
-                    await _MessageHandler(GetType(msg), msg);
-                }
-            });
+            subChannel1.Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(HandleMessage);
+            subChannel2.Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(HandleMessage);
         }
     }
 }

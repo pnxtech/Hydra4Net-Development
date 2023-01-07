@@ -1,12 +1,14 @@
 ﻿using System.Text.Json;
-
 namespace Hydra4NET;
 
-public class QueueProcessor
+public abstract class QueueProcessor : IDisposable
 {
-    private readonly Hydra _hydra;
+    private readonly IHydra _hydra;
+    protected IHydra Hydra => _hydra;
     private PeriodicTimer _timer;
     private CancellationTokenSource _cts = new();
+    Timer _tTimer;
+
 
     /**
      * The BaseDelay has to be a non zero value for two reasons:
@@ -22,19 +24,42 @@ public class QueueProcessor
     }
     private SlidingDuration _slidingDuration = SlidingDuration.BaseDelay;
 
-    public QueueProcessor(Hydra hydra)
+    public  QueueProcessor(IHydra hydra)
     {
         _hydra = hydra;
         _timer = new PeriodicTimer(TimeSpan.FromMilliseconds((double)SlidingDuration.BaseDelay));
-        Task? temp = StartQueueProcessor(); // allows for calling StartQueueProcessor without awaiting
+        //Task? temp = StartQueueProcessor(); // allows for calling StartQueueProcessor without awaiting
     }
-
-    protected virtual async Task ProcessMessage(string type, string message)
+    //i added the UMF object for easier casting, this breaks the current api though
+    protected abstract Task ProcessMessage(UMF? umf, string type, string message);
+    //{
+    //    await Task.Delay(0);
+    //    throw new NotImplementedException();        
+    //}
+    public void Init(CancellationToken ct = default)
     {
-        await Task.Delay(0);
-        throw new NotImplementedException();        
+        //period = 0 means dont automatically restart. we manually start when done
+        _tTimer = new Timer(async (o) =>
+        {
+            string message = await _hydra.GetQueueMessage(_hydra.ServiceName ?? "");
+            if (message != String.Empty)
+            {
+                UMF? umf = UMF.Deserialize(message);
+                if (umf != null)
+                {
+                    await ProcessMessage(umf, umf.Typ, message);
+                    _slidingDuration = SlidingDuration.BaseDelay;  
+                }
+            }
+            else
+            {
+                CalculateSlidingDuration();
+            }
+            _tTimer.Change((int)_slidingDuration, 0);
+        }, null, 0, 0);
+        //when cancelled, it will stop the timer
+        ct.Register(() => _tTimer.Change(Timeout.Infinite, 0));
     }
-
     private async Task StartQueueProcessor()
     {
         try
@@ -46,13 +71,10 @@ public class QueueProcessor
                 string message = await _hydra.GetQueueMessage(_hydra.ServiceName ?? "");
                 if (message != String.Empty)
                 {
-                    UMFBase? umf = JsonSerializer.Deserialize<UMFBase>(message, new JsonSerializerOptions()
-                    {
-                        PropertyNameCaseInsensitive = true
-                    });
+                    UMF? umf = UMF.Deserialize(message);
                     if (umf != null)
                     {
-                        await ProcessMessage(umf.Typ, message);
+                        await ProcessMessage(umf, umf.Typ, message);
                         ResetSlidingDuration();
                     }
                 }
@@ -82,6 +104,12 @@ public class QueueProcessor
         _cts.Cancel();
         _cts.Dispose();
         _cts = new CancellationTokenSource();
+        CalculateSlidingDuration();
+        _timer = new PeriodicTimer(TimeSpan.FromMilliseconds((double)_slidingDuration));
+    }
+
+    private void CalculateSlidingDuration()
+    {
         switch (_slidingDuration)
         {
             case SlidingDuration.BaseDelay:
@@ -97,6 +125,12 @@ public class QueueProcessor
                 _slidingDuration = SlidingDuration.LongestDelay;
                 break;
         }
-        _timer = new PeriodicTimer(TimeSpan.FromMilliseconds((double)_slidingDuration));
+    }
+
+    public void Dispose()
+    {
+        _tTimer?.Dispose();
+        _cts?.Dispose();
+        _timer?.Dispose();
     }
 }

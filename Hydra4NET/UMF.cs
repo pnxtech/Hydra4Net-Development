@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 /**
  * UMF - Universal Message Format
@@ -45,7 +46,7 @@ public class UMFRouteEntry
 public abstract class UMFBase
 {
     protected const string _UMF_Version = "UMF/1.4.6";
-    protected string _To;
+    protected string _To; 
     protected string _From;
     protected string _Mid;
     protected string _Type;
@@ -99,6 +100,13 @@ public abstract class UMFBase
     }
 
     public virtual object Bdy { get; set; }
+
+    //maybe handle like this in case they want to serialize manually?
+    //public void SetMessageJson(string json) => _MessageJson = json;
+    //public string GetMessageJson() => _MessageJson;
+
+    [JsonIgnore] //prevent System.Text.Json from serializing / deserializing
+    public string MessageJson { get; set; }
 
     /**
      * GetTimestap()
@@ -198,6 +206,22 @@ public abstract class UMFBase
 
     public UMFRouteEntry GetRouteEntry() => ParseRoute(To);
 
+
+    /**
+     * Deserilize
+     * JSON Deserilization helper
+     **/
+    static public U? Deserialize<U>(string message) where U : UMFBase
+    {
+        var umf = JsonSerializer.Deserialize<U>(message, new JsonSerializerOptions()
+        {
+            PropertyNameCaseInsensitive = true
+        });
+        if (umf != null)
+            umf.MessageJson = message;
+        return umf;
+    }
+
 }
 
 /**
@@ -206,7 +230,7 @@ public abstract class UMFBase
  * implement a UMF and body message pair. T is the class type of 
  * the UMF's message body.
  */
-public class UMF<T> : UMFBase where T : class, new()
+public class UMF<T> : UMFBase where T : new()
 {
     public new T Bdy { get; set; } = new T();
     public UMF() : base()
@@ -214,28 +238,15 @@ public class UMF<T> : UMFBase where T : class, new()
         //_Body = new T();
     }
 
-    /**
-     * Deserilize
-     * JSON Deserilization helper
-     **/
-    static public U? Deserialize<U>(string message) where U : UMF<T>
-    {
-        return JsonSerializer.Deserialize<U>(message, new JsonSerializerOptions()
-        {
-            PropertyNameCaseInsensitive = true
-        });
-    }
+    static public UMF<T>? Deserialize(string message) => Deserialize<UMF<T>>(message);
 
-    static public UMF<T>? Deserialize(string message) 
-    {
-        return JsonSerializer.Deserialize<UMF<T>>(message, new JsonSerializerOptions()
-        {
-            PropertyNameCaseInsensitive = true
-        });
-    }
 }    
 
-public class UMF : UMF<object>
+public class UMF : UMFBase
 {
     public UMF() : base() { }
+    static public  UMF? Deserialize(string message) => Deserialize<UMF>(message);
+    public UMF<T> Cast<T>() where T : new() => UMF<T>.Deserialize(MessageJson)!;
+    public U Cast<U, T>() where U : UMF<T> where T : new() => Deserialize<U>(MessageJson)!;
+
 }

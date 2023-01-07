@@ -15,14 +15,13 @@ namespace Hydra4Net.HostingExtensions
         {
             services.TryAddSingleton<IHydra>((s =>
             {
-                var handler = s.GetRequiredService<IHydraEventsHandler>();
                 var hydra = new Hydra(config);
                 //could do this before init in the background service also
-                hydra.OnMessageHandler(handler.OnMessageReceived);
                 return hydra;
             }));
             services.AddHostedService<HydraBackgroundService>();
             services.AddSingleton(config); // dangerous since HydraConfigObject is not immutable, but it only matters at init()?
+            services.AddSingleton<DefaultQueueProcessor>();
             return services;
         }
         public static IServiceCollection AddHydraEventHandler<T>(this IServiceCollection services) where T: class, IHydraEventsHandler

@@ -43,6 +43,7 @@ public class App
                 break;
             case "queuer":
                 queuer = new Queuer(hydra);
+                queuer.Init();
                 break;
             default:
                 Console.WriteLine("Hydra config.json doesn't specify a valid ServiceType role");

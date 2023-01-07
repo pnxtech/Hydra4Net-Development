@@ -9,7 +9,9 @@ namespace Hydra4Net.HostingExtensions
 {
     public abstract class HydraEventsHandler : IHydraEventsHandler
     {
-        public abstract Task OnMessageReceived(string type, string? message);
+        public abstract Task OnMessageReceived(UMF umf, string type, string? message, IHydra hydra);
+        public abstract Task OnQueueMessageReceived(UMF umf, string type, string? message, IHydra hydra);
+   
         public virtual Task OnInit(IHydra hydra)
         {
             return Task.CompletedTask;
@@ -23,5 +25,7 @@ namespace Hydra4Net.HostingExtensions
         {
             return Task.CompletedTask;
         }
+
+     
     }
 }

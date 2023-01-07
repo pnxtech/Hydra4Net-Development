@@ -12,7 +12,7 @@ public class Queuer : QueueProcessor
         _hydra = hydra;
     }
 
-    protected override async Task ProcessMessage(string type, string message)
+    protected override async Task ProcessMessage(UMF umf, string type, string message)
     {
         Console.WriteLine("Queuer: retrieved message from queue");
         if (type == "queuer")

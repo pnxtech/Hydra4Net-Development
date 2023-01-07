@@ -11,12 +11,14 @@ namespace Hydra4Net.HostingExtensions
 {
     public sealed class HydraBackgroundService : BackgroundService
     {
-        public HydraBackgroundService(IHydraEventsHandler events, IHydra hydra)
+        public HydraBackgroundService(IHydraEventsHandler events, IHydra hydra, DefaultQueueProcessor queue)
         {
             _events = events;
             _hydra = hydra;
+            _queue = queue;
         }
         protected IHydra _hydra;
+        private DefaultQueueProcessor _queue;
         private IHydraEventsHandler _events;
 
         //called once at app shutdown
@@ -31,9 +33,11 @@ namespace Hydra4Net.HostingExtensions
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             try
-            {
+            {        
+                _hydra.OnMessageHandler((umf, type, msg) => _events.OnMessageReceived(umf, type, msg, _hydra));
                 await _events.OnInit(_hydra);
                 await _hydra.Init();
+                _queue.Init(stoppingToken);
             }
             catch(Exception e)
             {
@@ -41,6 +45,11 @@ namespace Hydra4Net.HostingExtensions
                 await _events.OnInitError(_hydra, e);
                 throw;
             }
+
         }
+
+
+
+
     }
 }

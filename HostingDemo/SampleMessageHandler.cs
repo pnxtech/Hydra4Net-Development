@@ -1,5 +1,7 @@
-﻿using Hydra4Net.HostingExtensions;
+﻿using HostingDemo.Models;
+using Hydra4Net.HostingExtensions;
 using Hydra4NET;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -13,15 +15,75 @@ namespace HostingDemo
     {
         private ILogger<SampleMessageHandler> _logger;
 
-        public SampleMessageHandler(ILogger<SampleMessageHandler> logger)
+        private string _mode;
+        private Sender _sender;
+
+        public SampleMessageHandler(ILogger<SampleMessageHandler> logger, HydraConfigObject config, Sender sender)
         {
             _logger = logger;
+            //add to appsettings.json file or env
+            SetValidateMode(config);
+            _sender = sender;
+        }
+        private class Modes
+        {
+            public const string Sender = "sender";
+            public const string Queuer = "queuer";
+        }
+        void SetValidateMode(HydraConfigObject config)
+        {
+            _mode = config?.Hydra?.ServiceType?.ToLower() ?? "unknown";
+            switch (_mode)
+            {
+                case Modes.Sender:
+                case Modes.Queuer:
+                    _logger.LogInformation($"Configured as {_mode}");
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException("ServiceType", "Hydra config doesn't specify a valid ServiceType role");
+            }
         }
 
-        public override Task OnMessageReceived(string type, string? message)
+        public override async Task OnMessageReceived(UMF umf, string type, string? message, IHydra hydra)
         {
-            _logger.LogInformation($"Type: {type}, message: {message}");
-            return Task.CompletedTask;
+            _logger.LogInformation($"Received message of type {type}");
+            if (_mode == Modes.Sender && umf != null)
+            {
+                await _sender.ProcessMessage(type, umf);
+                Console.WriteLine();
+            }
+        }
+        public override async Task OnQueueMessageReceived(UMF umf, string type, string? message, IHydra hydra)
+        {
+            if (type != Modes.Queuer)
+                return;
+
+            _logger.LogInformation($"Queuer: processing queued message from sender");
+            SharedMessage? sm = umf.Cast<SharedMessage, SharedMessageBody>();
+            if (sm != null)
+            {
+                int? Id = sm?.Bdy?.Id ?? 0;
+                string? Msg = sm?.Bdy?.Msg ?? string.Empty;
+                if (Msg != string.Empty)
+                {
+                    SharedMessage sharedMessage = new()
+                    {
+                        To = "sender-svcs:/",
+                        Frm = $"{hydra.InstanceID}@{hydra.ServiceName}:/",
+                        Typ = "complete",
+                        Bdy = new()
+                        {
+                            Id = Id,
+                            Msg = $"Queuer: processed message containing {Msg} with ID of {Id}"
+                        }
+                    };
+                    string json = sharedMessage.Serialize();
+                    await hydra.MarkQueueMessage(message, true);
+                    await hydra.SendMessage(sharedMessage.To, json);
+                    _logger.LogInformation($"Queuer: sent completion message back to sender");
+                }
+            }
+
         }
 
         #region Optional
@@ -40,6 +102,8 @@ namespace HostingDemo
             _logger.LogCritical(e, "A fatal error occurred initializing Hydra");
             return base.OnInitError(hydra, e);
         }
+
+
         #endregion Optional
     }
 }
