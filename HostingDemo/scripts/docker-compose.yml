@@ -13,7 +13,7 @@ services:
     image: redis/redis-stack:6.2.2-v4
     #command: redis-cli --save 20 1 --loglevel warning --appendonly yes --protected-mode no
     volumes:
-      - "./data/redis:/data"
+      - "../data/redis:/data"
     ports:
       - target: 6379
         published: 6379

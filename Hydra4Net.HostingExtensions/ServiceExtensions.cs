@@ -11,6 +11,12 @@ namespace Hydra4Net.HostingExtensions
 {
     public static class ServiceExtensions
     {
+        /// <summary>
+        /// Adds required Hydra services to DI
+        /// </summary>
+        /// <param name="services"></param>
+        /// <param name="config"></param>
+        /// <returns></returns>
         public static IServiceCollection AddHydraServices(this IServiceCollection services, HydraConfigObject config)
         {
             services.TryAddSingleton<IHydra>((s =>
@@ -24,9 +30,20 @@ namespace Hydra4Net.HostingExtensions
             services.AddSingleton<DefaultQueueProcessor>();
             return services;
         }
+        /// <summary>
+        /// Add an implementation of the IHydraEventsHandler to DI. Optionally inherit the HydraEventsHandler class.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="services"></param>
+        /// <returns></returns>
         public static IServiceCollection AddHydraEventHandler<T>(this IServiceCollection services) where T: class, IHydraEventsHandler
-            => services.AddSingleton<IHydraEventsHandler, T>();  
-        
+            => services.AddSingleton<IHydraEventsHandler, T>();
+        /// <summary>
+        /// Add an implementation of the IHydraEventsHandler to DI. Optionally inherit the HydraEventsHandler class.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="services"></param>
+        /// <returns></returns>
         public static IServiceCollection AddHydraEventHandler<T>(this IServiceCollection services, Func<IServiceProvider, T> implementationFactory) where T : class, IHydraEventsHandler
             => services.AddSingleton<IHydraEventsHandler>(implementationFactory);
     }

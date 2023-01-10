@@ -17,8 +17,9 @@ var host = Host.CreateDefaultBuilder(args)
     {
         var config = cont.Configuration.GetSection("HydraConfig").GetHydraConfig();          
         //(also works due to additional helper) var config = cont.Configuration.GetHydraConfig();
-        services.AddHydraServices(config)
-        //could also implement interface without base class
+        services
+        .AddHydraServices(config)
+        //could also implement IHydraEventsHandler interface without base class
         .AddHydraEventHandler<SampleMessageHandler>();
         services.AddSingleton<Sender>();
     }).Build();
