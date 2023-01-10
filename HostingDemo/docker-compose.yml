@@ -13,9 +13,7 @@ services:
     image: redis/redis-stack:6.2.2-v4
     #command: redis-cli --save 20 1 --loglevel warning --appendonly yes --protected-mode no
     volumes:
-      - "./data/${STACK_NAME}/redis:/data"
-    networks:
-      - servicenet
+      - "./data/redis:/data"
     ports:
       - target: 6379
         published: 6379
@@ -29,24 +27,19 @@ services:
       replicas: 1
   sender:
     image: 'hostingdemo'
-    networks:
-      - servicenet
     environment:
       HydraConfig__Hydra__ServiceType: sender
+      HydraConfig__Hydra__ServiceName: sender-svcs
     depends_on:
       - redis
-    deploy:
-      replicas: 1
   queuer:
     image: 'hostingdemo'
-    networks:
-      - servicenet
     environment:
       HydraConfig__Hydra__ServiceType: queuer
+      HydraConfig__Hydra__ServiceName: queuer-svcs
     depends_on:
       - redis
-    deploy:
-      replicas: 1
+
 
 
 

@@ -195,13 +195,6 @@ public abstract class UMFBase
      * Hydra-based services written in non-Dotnet environments expect a 
      * universal format.
      **/
-    public string Serialize()
-    {
-        return JsonSerializer.Serialize(this, new JsonSerializerOptions()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-    }
 
 
     public UMFRouteEntry GetRouteEntry() => ParseRoute(To);
@@ -239,13 +232,21 @@ public class UMF<T> : UMFBase where T : new()
     }
 
     static public UMF<T>? Deserialize(string message) => Deserialize<UMF<T>>(message);
+    //doesnt work in base class
+    public string Serialize()
+    {
+        return JsonSerializer.Serialize(this, new JsonSerializerOptions()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+    }
 
-}    
+}
 
-public class UMF : UMFBase
+public class UMF : UMF<object>
 {
     public UMF() : base() { }
-    static public  UMF? Deserialize(string message) => Deserialize<UMF>(message);
+    static public new  UMF? Deserialize(string message) => Deserialize<UMF>(message);
     public UMF<T> Cast<T>() where T : new() => UMF<T>.Deserialize(MessageJson)!;
     public U Cast<U, T>() where U : UMF<T> where T : new() => Deserialize<U>(MessageJson)!;
 

@@ -57,31 +57,47 @@ namespace HostingDemo
         {
             if (type != Modes.Queuer)
                 return;
-
-            _logger.LogInformation($"Queuer: processing queued message from sender");
-            SharedMessage? sm = umf.Cast<SharedMessage, SharedMessageBody>();
-            if (sm != null)
+            try
             {
-                int? Id = sm?.Bdy?.Id ?? 0;
-                string? Msg = sm?.Bdy?.Msg ?? string.Empty;
-                if (Msg != string.Empty)
+                _logger.LogInformation($"Queuer: processing queued message from sender");
+                SharedMessage? sm = umf.Cast<SharedMessage, SharedMessageBody>();
+                if (sm != null)
                 {
-                    SharedMessage sharedMessage = new()
+                    int? Id = sm?.Bdy?.Id ?? 0;
+                    string? Msg = sm?.Bdy?.Msg ?? string.Empty;
+                    if (Msg != string.Empty)
                     {
-                        To = "sender-svcs:/",
-                        Frm = $"{hydra.InstanceID}@{hydra.ServiceName}:/",
-                        Typ = "complete",
-                        Bdy = new()
+                        SharedMessage sharedMessage = new()
                         {
-                            Id = Id,
-                            Msg = $"Queuer: processed message containing {Msg} with ID of {Id}"
-                        }
-                    };
-                    string json = sharedMessage.Serialize();
-                    await hydra.MarkQueueMessage(message, true);
-                    await hydra.SendMessage(sharedMessage.To, json);
-                    _logger.LogInformation($"Queuer: sent completion message back to sender");
+                            To = "sender-svcs:/",
+                            Frm = $"{hydra.InstanceID}@{hydra.ServiceName}:/",
+                            Typ = "complete",
+                            Bdy = new()
+                            {
+                                Id = Id,
+                                Msg = $"Queuer: processed message containing {Msg} with ID of {Id}"
+                            }
+                        };
+                        string json = sharedMessage.Serialize();
+                        _logger.LogInformation($"Queuer: mark message: {message}");
+                        await hydra.MarkQueueMessage(message, true);
+                        _logger.LogInformation($"Queuer: send json: {json}");
+                        await hydra.SendMessage(sharedMessage.To, json);
+                        _logger.LogInformation($"Queuer: sent completion message back to sender");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Queue Msg null: {0}", message);
+                    }
                 }
+                else
+                {
+                    _logger.LogError("SharedMessage is null, body: {0}", umf.MessageJson);
+                }
+            }
+            catch(Exception e)
+            {
+                _logger.LogError(e, "Queue handler failed");
             }
 
         }

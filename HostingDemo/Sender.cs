@@ -67,6 +67,7 @@ public class Sender
                 Msg = "Sample job queue message"
             }
         };
+        _logger.LogDebug($"Sending message for queuer: {sharedMessage.Serialize()}");
         await _hydra.QueueMessage(sharedMessage);
     }
 }

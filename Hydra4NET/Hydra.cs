@@ -67,7 +67,9 @@ public partial class Hydra : IHydra
 
     private IServer? _server;
     private ConnectionMultiplexer? _redis;
-    private IDatabase? _db;
+
+    //the docs say IDatabase does not need to be stored.  id rather not store it in case it is not thread-safe 
+    //private IDatabase? _db;
     #endregion // Class variables
 
     // Storing it as a property  allows easier DI IMO.  we should probably pick either contructor or init though
@@ -85,8 +87,6 @@ public partial class Hydra : IHydra
         _timer = new PeriodicTimer(interval);
         _config = config;
     }
-
-
 
     #region Initialization
     public async Task Init(HydraConfigObject config = null)
@@ -140,22 +140,21 @@ public partial class Hydra : IHydra
 
         //wed probably want some kind of log output instead of directly to console.  We could have an inbuild console option (eg via the plugin) or custom log sinks (eg asp core's ILogger)
         Console.WriteLine($"{ServiceName} ({InstanceID}) listening on {ServiceIP}");
-
         string connectionString = $"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port},defaultDatabase={_config?.Hydra?.Redis?.Db}";
         if (_config?.Hydra?.Redis?.Options != String.Empty)
         {
             connectionString = $"{connectionString},{_config?.Hydra?.Redis?.Options}";
         }
         _redis = ConnectionMultiplexer.Connect(connectionString);
-        if (_redis != null)
+        if (_redis != null && _redis.IsConnected)
         {
             _server = _redis.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
-            _db = _redis.GetDatabase();
+            //_db = _redis.GetDatabase();
             await RegisterService();
         }
         else
         {
-            Console.WriteLine("Warning, ConnectionMultiplexer returned false");
+            throw new HydraInitException("Failed to initialize Hydra, connection to redis failed");
         }
     }
     #endregion
@@ -225,9 +224,9 @@ public partial class Hydra : IHydra
 
     public async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
     {
-        if (entry.Error == string.Empty && _db != null)
+        if (entry.Error == string.Empty && _redis != null)
         {
-            await _db.ListLeftPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
+            await _redis.GetDatabase().ListLeftPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
         }
     }
 
@@ -237,16 +236,16 @@ public partial class Hydra : IHydra
 
     public Task QueueMessage(string jsonUMFMessage)     
     {
-        UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+        UMF? umfHeader = ExtractUMFHeader(jsonUMFMessage);
         return QueueMessage(umfHeader?.GetRouteEntry(), jsonUMFMessage);
     }
 
     public async Task<String> GetQueueMessage(string serviceName)
     {
         string jsonUMFMessage = String.Empty;
-        if (_db != null)
+        if (_redis != null)
         {
-            var result = await _db.ListRightPopLeftPushAsync(
+            var result = await _redis.GetDatabase().ListRightPopLeftPushAsync(
                 $"{_redis_pre_key}:{serviceName}:mqrecieved",
                 $"{_redis_pre_key}:{serviceName}:mqinprogress"
             );
@@ -266,17 +265,18 @@ public partial class Hydra : IHydra
      */
     public async Task<String> MarkQueueMessage(string jsonUMFMessage, bool completed)
     {
-        UMFBase? umfHeader = ExtractUMFHeader(jsonUMFMessage);
-        if (umfHeader != null && _db != null)
+        UMF? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+        if (umfHeader != null && _redis != null)
         {
             UMFRouteEntry entry = umfHeader.GetRouteEntry();
             if (entry != null)
             {
-                await _db.ListRemoveAsync($"{_redis_pre_key}:{entry.ServiceName}:mqinprogress", jsonUMFMessage, -1);
+                var db = _redis.GetDatabase();
+                await db.ListRemoveAsync($"{_redis_pre_key}:{entry.ServiceName}:mqinprogress", jsonUMFMessage, -1);
                 if (completed == false)
                 {
                     // message was not completed, 
-                    await _db.ListRightPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
+                    await db.ListRightPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
                 }
             }
         }
@@ -308,16 +308,16 @@ public partial class Hydra : IHydra
     * ***********************************
     */
 
-    static UMFBase? ExtractUMFHeader(string jsonUMFString)
+    static UMF? ExtractUMFHeader(string jsonUMFString)
     {
-        return JsonSerializer.Deserialize<UMFBase>(jsonUMFString, new JsonSerializerOptions()
+        return JsonSerializer.Deserialize<UMF>(jsonUMFString, new JsonSerializerOptions()
         {
             PropertyNameCaseInsensitive = true
         });
     }
     static string GetType(string jsonUMFString)
     {
-        UMFBase? baseUMF = ExtractUMFHeader(jsonUMFString);
+        UMF? baseUMF = ExtractUMFHeader(jsonUMFString);
         return (baseUMF != null) ? baseUMF.Typ : "";
     }
 
@@ -328,7 +328,7 @@ public partial class Hydra : IHydra
         //we should probably pick one or the other
         if (_MessageHandler != null)
         {
-            await _MessageHandler(type , msg);
+            await _MessageHandler(type, msg);
         }
         if (_UmfHandler != null)
         {
@@ -339,15 +339,16 @@ public partial class Hydra : IHydra
 
     private async Task RegisterService()
     {
-        if (_db != null)
+        if (_redis != null)
         {
-            await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", Serialize(new RegistrationEntry
+            var db = _redis.GetDatabase();
+            await db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:service", Serialize(new RegistrationEntry
             {
                 ServiceName = ServiceName,
                 Type = ServiceType,
                 RegisteredOn = GetTimestamp()
             }));
-            await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:service", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
+            await db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:service", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
         }
 
         if (_redis != null)
