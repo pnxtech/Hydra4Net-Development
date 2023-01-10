@@ -125,20 +125,22 @@ public partial class Hydra : IDisposable
 
     private async Task PresenceEvent()
     {
-        if (_db != null)
+        if (_redis != null)
         {
-            await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", InstanceID);
-            await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
-            await _db.HashSetAsync($"{_redis_pre_key}:nodes", InstanceID, BuildPresenceNodeEntry());
+            var db = _redis.GetDatabase();
+            await db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", InstanceID);
+            await db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
+            await db.HashSetAsync($"{_redis_pre_key}:nodes", InstanceID, BuildPresenceNodeEntry());
         }
     }
 
     private async Task HealthCheckEvent()
     {
-        if (_db != null)
+        if (_redis != null)
         {
-            await _db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", BuildHealthCheckEntry());
-            await _db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
+            var db = _redis.GetDatabase();
+            await db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", BuildHealthCheckEntry());
+            await db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
         }
     }
 
@@ -157,7 +159,7 @@ public partial class Hydra : IDisposable
         List<string> instanceIds = new();
         List<PresenceNodeEntry> serviceEntries = new();
 
-        if (_server != null && _db != null)
+        if (_server != null && _redis != null)
         {
             foreach (var key in _server.Keys(pattern: $"*:{serviceName}:*:presence"))
             {
@@ -170,7 +172,7 @@ public partial class Hydra : IDisposable
             }
             foreach (var id in instanceIds)
             {                   
-                string? s = await _db.HashGetAsync($"{_redis_pre_key}:nodes", id);
+                string? s = await _redis.GetDatabase().HashGetAsync($"{_redis_pre_key}:nodes", id);
                 if (s != null)
                 {
                     PresenceNodeEntry? presenceNodeEntry = JsonSerializer.Deserialize<PresenceNodeEntry>(s, new JsonSerializerOptions()
