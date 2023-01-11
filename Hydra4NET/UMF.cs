@@ -252,7 +252,7 @@ namespace Hydra4NET
     /// <summary>
     /// The UMF class that's used to implement an untyped UMF and body message pair.
     /// </summary>
-    public class UMF : UMF<object>
+    public class UMF : UMF<JsonElement>
     {
         public UMF() : base() { }
         /// <summary>

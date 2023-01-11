@@ -322,20 +322,14 @@ namespace Hydra4NET
                 PropertyNameCaseInsensitive = true
             });
         }
-        static string GetType(string jsonUMFString)
-        {
-            UMF? baseUMF = ExtractUMFHeader(jsonUMFString);
-            return (baseUMF != null) ? baseUMF.Typ : "";
-        }
-
+        
         async Task HandleMessage(ChannelMessage channelMessage)
         {
             string msg = (string?)channelMessage.Message ?? String.Empty;
-            var type = GetType(msg);           
             if (_MessageHandler != null)
             {
-                var umf = UMF.Deserialize(msg);
-                await _MessageHandler(umf, type, msg);
+                var umf = UMF.Deserialize(msg);           
+                await _MessageHandler(umf, umf?.Typ ?? "", msg);
             }
         }
 
