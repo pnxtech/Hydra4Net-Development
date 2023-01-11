@@ -1,4 +1,6 @@
 ﻿using Hydra4NET;
+using System;
+using System.Threading.Tasks;
 
 namespace Hydra4Net.HostingExtensions
 {

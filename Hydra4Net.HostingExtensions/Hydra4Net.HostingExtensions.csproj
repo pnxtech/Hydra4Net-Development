@@ -1,17 +1,47 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <!--<ImplicitUsings>enable</ImplicitUsings>-->
     <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>Hydra for .NET</Title>
+    <SignAssembly>True</SignAssembly>
+    <AssemblyVersion>0.0.9</AssemblyVersion>
+    <FileVersion>0.0.9</FileVersion>
+    <Version>0.0.9</Version>
+    <Description>Hydra for .NET is a library for building microservices.</Description>
+    <Copyright>2022 Carlos Justiniano, Justin Couch, and Contributors</Copyright>
+    <PackageTags>hydra microservice</PackageTags>
+    <PackageReleaseNotes>This is a work-in-progress experimental release.</PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/pnxtech/Hydra4Net-Development</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageIcon>Hydra4Net-icon.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Hydra4NET\Hydra4NET.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Update="Hydra4Net-icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

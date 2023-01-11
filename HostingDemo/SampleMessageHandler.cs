@@ -53,6 +53,7 @@ namespace HostingDemo
                 Console.WriteLine();
             }
         }
+
         public override async Task OnQueueMessageReceived(UMF umf, string type, string? message, IHydra hydra)
         {
             if (type != Modes.Queuer)

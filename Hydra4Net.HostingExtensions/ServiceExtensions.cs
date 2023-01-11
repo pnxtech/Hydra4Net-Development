@@ -17,7 +17,7 @@ namespace Hydra4Net.HostingExtensions
         /// <param name="services"></param>
         /// <param name="config"></param>
         /// <returns></returns>
-        public static IServiceCollection AddHydraServices(this IServiceCollection services, HydraConfigObject config)
+        public static IServiceCollection AddHydra(this IServiceCollection services, HydraConfigObject config)
         {
             services.TryAddSingleton<IHydra>((s =>
             {
@@ -46,5 +46,6 @@ namespace Hydra4Net.HostingExtensions
         /// <returns></returns>
         public static IServiceCollection AddHydraEventHandler<T>(this IServiceCollection services, Func<IServiceProvider, T> implementationFactory) where T : class, IHydraEventsHandler
             => services.AddSingleton<IHydraEventsHandler>(implementationFactory);
+
     }
 }
