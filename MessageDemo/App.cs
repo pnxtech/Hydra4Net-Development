@@ -43,6 +43,7 @@ public class App
                 break;
             case "queuer":
                 queuer = new Queuer(hydra);
+                queuer.Init();
                 break;
             default:
                 Console.WriteLine("Hydra config.json doesn't specify a valid ServiceType role");
@@ -54,7 +55,7 @@ public class App
         Console.WriteLine();
 
         // Setup an OnMessageHandler to recieve incoming messages
-        hydra.OnMessageHandler(async (string type, string? message) =>
+        hydra.OnMessageHandler(async (IReceivedUMF? umf, string type, string? message) =>
         {
             Console.WriteLine($"Sender: received message of type {type}");
             if (sender != null && message != null)

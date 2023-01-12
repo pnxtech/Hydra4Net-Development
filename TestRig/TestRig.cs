@@ -1,4 +1,3 @@
-using System.Text;
 using Hydra4NET;
 using static Hydra4NET.Hydra;
 
@@ -23,7 +22,7 @@ public class TestMsgBody
  * This class represents a UMF class with a body type of TestMsgBody.
  * See the CreateUMFMessage below for an example of how the body is set.
  */
-public class TestMsg: UMF<TestMsgBody>
+public class TestMsg : UMF<TestMsgBody>
 {
     public TestMsg()
     {
@@ -37,7 +36,7 @@ public class PingMsgBody
 {
     public string Message { get; set; } = String.Empty;
 }
-public class PingMsg: UMF<PingMsgBody>
+public class PingMsg : UMF<PingMsgBody>
 {
     public PingMsg()
     {
@@ -53,7 +52,7 @@ public class QueueMsgBody
     public string JobType { get; set; } = String.Empty;
     public string JobData { get; set; } = String.Empty;
 }
-public class QueueMsg: UMF<QueueMsgBody>
+public class QueueMsg : UMF<QueueMsgBody>
 {
 }
 
@@ -87,16 +86,16 @@ public class Tests
 
     public TestMsg? ParseTestMsg(string json)
     {
-        return TestMsg.Deserialize<TestMsg>(json);
+        return StandardSerializer.Deserialize<TestMsg>(json);
 
     }
     public PingMsg? ParsePingMsg(string json)
     {
-        return PingMsg.Deserialize<PingMsg>(json);
+        return StandardSerializer.Deserialize<PingMsg>(json);
     }
     public QueueMsg? ParseQueueMsg(string json)
     {
-        return QueueMsg.Deserialize<QueueMsg>(json);
+        return StandardSerializer.Deserialize<QueueMsg>(json);
     }
 
 
@@ -137,8 +136,10 @@ public class Tests
         pingMessage.To = "hmr-service:/";
         pingMessage.Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/";
         pingMessage.Typ = "ping";
-        string json = pingMessage.Serialize();
-        await _hydra.SendMessage(pingMessage.To, json);
+        //string json = pingMessage.Serialize();
+        //await _hydra.SendMessage(pingMessage.To, json);
+        await _hydra.SendMessage(pingMessage);
+
     }
 
     /** 

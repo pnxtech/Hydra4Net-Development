@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "HostingDemo": {
+      "commandName": "Project"
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "commandLineArgs": "--network"
+    }
+  }
+}
