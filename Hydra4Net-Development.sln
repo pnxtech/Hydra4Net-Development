@@ -9,9 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestRig", "TestRig\TestRig.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MessageDemo", "MessageDemo\MessageDemo.csproj", "{B498AFF5-3AD1-4020-9555-0A05A3148FE0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hydra4Net.HostingExtensions", "Hydra4Net.HostingExtensions\Hydra4Net.HostingExtensions.csproj", "{F9B418A3-9890-4D16-9DAE-11B1E52CE232}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hydra4Net.HostingExtensions", "Hydra4Net.HostingExtensions\Hydra4Net.HostingExtensions.csproj", "{F9B418A3-9890-4D16-9DAE-11B1E52CE232}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HostingDemo", "HostingDemo\HostingDemo.csproj", "{AB06C116-0139-4BAB-8831-52A3C323EB4A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HostingMessageDemo", "HostingMessageDemo\HostingMessageDemo.csproj", "{AB06C116-0139-4BAB-8831-52A3C323EB4A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

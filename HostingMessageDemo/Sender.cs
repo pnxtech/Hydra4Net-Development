@@ -15,8 +15,8 @@ public class Sender
         _logger = logger;
     }
 
-    public async Task ProcessMessage(string type,  UMF umf)
-    {            
+    public async Task ProcessMessage(string type, IReceivedUMF umf)
+    {
         switch (type) // Messages dispatcher
         {
             case "start":
@@ -28,9 +28,9 @@ public class Sender
         }
     }
 
-    private async Task ProcessCommandMessage(UMF umf)
+    private async Task ProcessCommandMessage(IReceivedUMF umf)
     {
-        UMF<CommandMessageBody> msg = umf.Cast<CommandMessageBody>();
+        UMF<CommandMessageBody> msg = umf.ToUMF<CommandMessageBody>();
         //CommandMessage? msg = umf.Cast<CommandMessage, CommandMessageBody>();
         if (msg != null)
         {
@@ -44,9 +44,9 @@ public class Sender
         }
     }
 
-    private void ProcessSenderMessage(UMF umf)
+    private void ProcessSenderMessage(IReceivedUMF umf)
     {
-        UMF<SharedMessageBody> msg = umf.Cast<SharedMessageBody>();
+        UMF<SharedMessageBody> msg = umf.ToUMF<SharedMessageBody>();
         //SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
         if (msg != null)
         {
@@ -56,7 +56,7 @@ public class Sender
 
     private async Task QueueMessageForQueuer()
     {
-        SharedMessage sharedMessage = new()
+        UMF<SharedMessageBody> sharedMessage = new()
         {
             To = "queuer-svcs:/",
             Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/",

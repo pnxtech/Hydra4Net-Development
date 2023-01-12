@@ -2,10 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hydra4Net.HostingExtensions
 {
@@ -30,22 +26,32 @@ namespace Hydra4Net.HostingExtensions
             services.AddSingleton<DefaultQueueProcessor>();
             return services;
         }
-        /// <summary>
-        /// Add an implementation of the IHydraEventsHandler to DI. Optionally inherit the HydraEventsHandler class.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="services"></param>
-        /// <returns></returns>
-        public static IServiceCollection AddHydraEventHandler<T>(this IServiceCollection services) where T: class, IHydraEventsHandler
-            => services.AddSingleton<IHydraEventsHandler, T>();
-        /// <summary>
-        /// Add an implementation of the IHydraEventsHandler to DI. Optionally inherit the HydraEventsHandler class.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="services"></param>
-        /// <returns></returns>
-        public static IServiceCollection AddHydraEventHandler<T>(this IServiceCollection services, Func<IServiceProvider, T> implementationFactory) where T : class, IHydraEventsHandler
-            => services.AddSingleton<IHydraEventsHandler>(implementationFactory);
 
+        /// <summary>
+        /// Add an implementation of the IHydraEventsHandler to DI. Optionally inherit the HydraEventsHandler class.
+        /// </summary>
+        /// <typeparam name="THandler"></typeparam>
+        /// <param name="services"></param>
+        /// <param name="lifetime"></param>
+        /// <returns></returns>
+        public static IServiceCollection AddHydraEventHandler<THandler>(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Singleton) where THandler : class, IHydraEventsHandler
+        {
+            services.Add(new ServiceDescriptor(typeof(IHydraEventsHandler), typeof(THandler), lifetime));
+            return services;
+        }
+
+        /// <summary>
+        /// Add an implementation of the IHydraEventsHandler to DI. Optionally inherit the HydraEventsHandler class.
+        /// </summary>
+        /// <typeparam name="THandler"></typeparam>
+        /// <param name="services"></param>
+        /// <param name="implementationFactory"></param>
+        /// <param name="lifetime"></param>
+        /// <returns></returns>
+        public static IServiceCollection AddHydraEventHandler<THandler>(this IServiceCollection services, Func<IServiceProvider, THandler> implementationFactory, ServiceLifetime lifetime = ServiceLifetime.Singleton) where THandler : class, IHydraEventsHandler
+        {
+            services.Add(new ServiceDescriptor(typeof(IHydraEventsHandler), implementationFactory, lifetime));
+            return services;
+        }
     }
 }

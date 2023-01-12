@@ -13,7 +13,7 @@ public class Sender
     }
 
     public async Task ProcessMessage(string type, string message)
-    {            
+    {
         switch (type) // Messages dispatcher
         {
             case "start":
@@ -27,7 +27,7 @@ public class Sender
 
     private async Task ProcessCommandMessage(string message)
     {
-        CommandMessage? msg = CommandMessage.Deserialize<CommandMessage>(message);
+        CommandMessage? msg = StandardSerializer.Deserialize<CommandMessage>(message);
         if (msg != null)
         {
             switch (msg.Bdy?.Cmd)
@@ -42,7 +42,7 @@ public class Sender
 
     private void ProcessSenderMessage(string message)
     {
-        SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
+        SharedMessage? msg = StandardSerializer.Deserialize<SharedMessage>(message);
         if (msg != null)
         {
             Console.WriteLine($"Sender: message received {msg.Bdy?.Msg}");

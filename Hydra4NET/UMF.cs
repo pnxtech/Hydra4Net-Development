@@ -60,10 +60,10 @@ namespace Hydra4NET
             _Mid = Guid.NewGuid().ToString();
             _Type = String.Empty;
             _Version = _UMF_Version;
-            _Timestamp = GetTimestamp();
+            _Timestamp = Iso8601.GetTimestamp();
         }
 
-        public string To 
+        public string To
         {
             get { return _To; }
             set { _To = value; }
@@ -100,25 +100,6 @@ namespace Hydra4NET
         }
 
         public virtual object Bdy { get; set; }
-
-        //maybe handle like this in case they want to serialize manually?
-        //public void SetMessageJson(string json) => _MessageJson = json;
-        //public string GetMessageJson() => _MessageJson;
-
-        [JsonIgnore] //prevent System.Text.Json from serializing / deserializing
-        public string MessageJson { get; set; }
-
-
-        /// <summary>
-        /// Retreive an ISO 8601 formatted UTC string
-        /// </summary>
-        /// <returns></returns>
-        public static string GetTimestamp()
-        {
-            DateTime dateTime = DateTime.Now;
-            return dateTime.ToUniversalTime().ToString("u").Replace(" ", "T");
-        }
-
 
         /// <summary>
         ///Parses a string based UMF route into individual route entries.
@@ -192,6 +173,7 @@ namespace Hydra4NET
             }
             return routeEntry;
         }
+
         /// <summary>
         /// Gets a UMFRouteEntry from the instance's To field
         /// </summary>
@@ -199,82 +181,66 @@ namespace Hydra4NET
         public UMFRouteEntry GetRouteEntry() => ParseRoute(To);
 
 
-        /**
-         * Deserilize
-         * JSON Deserilization helper
-         **/
-        static public U? Deserialize<U>(string message) where U : UMFBase
-        {
-            var umf = JsonSerializer.Deserialize<U>(message, new JsonSerializerOptions()
-            {
-                PropertyNameCaseInsensitive = true
-            });
-            if (umf != null)
-                umf.MessageJson = message;
-            return umf;
-        }
-
     }
 
     /// <summary>
     /// The Generics-based UMF class that's used to implement a UMF and body message pair. T is the class type of the UMF's message body.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class UMF<T> : UMFBase where T : new()
+    /// <typeparam name="TBdy"></typeparam>
+    public class UMF<TBdy> : UMFBase, IUMF<TBdy> where TBdy : new()
     {
-        public new T Bdy { get; set; } = new T();
+        public new TBdy Bdy { get; set; } = new TBdy();
         public UMF() : base()
         {
-            
+
         }
+
         /// <summary>
         /// Deserializes a UMF JSON message into a typed UMF class instance
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        static public UMF<T>? Deserialize(string message) => Deserialize<UMF<T>>(message);
+        static public UMF<TBdy>? Deserialize(string message) => StandardSerializer.Deserialize<UMF<TBdy>>(message);
 
-        //doesnt work in base class
         /// <summary>
         /// A JSON serializer helper which ensures that the generated JSON is compatible with JavaScript camel case. This is essential as Hydra-based services written in non-Dotnet environments expect a universal format.
         /// </summary>
         /// <returns></returns>
-        public string Serialize()
-        {
-            return JsonSerializer.Serialize(this, new JsonSerializerOptions()
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-        }
-
+        public string Serialize() => StandardSerializer.Serialize(this);
     }
-    //Consider making UMF<string> and forcing serialization of the Bdy as a raw json string
+
     /// <summary>
     /// The UMF class that's used to implement an untyped UMF and body message pair.
     /// </summary>
-    public class UMF : UMF<JsonElement>
+    internal class ReceivedUMF : UMF<JsonElement>, IReceivedUMF
     {
-        public UMF() : base() { }
+        public ReceivedUMF() : base() { }
+
+        /// <summary>
+        /// The original message's JSON value
+        /// </summary>
+        [JsonIgnore] //prevent System.Text.Json from serializing / deserializing
+        public string MessageJson { get; private set; }
+
         /// <summary>
         /// Deserializes a UMF JSON message into an untyped UMF class instance
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        static public new UMF? Deserialize(string message) => Deserialize<UMF>(message);
+        public static new ReceivedUMF? Deserialize(string message)
+        {
+            var umf = StandardSerializer.Deserialize<ReceivedUMF>(message);
+            if (umf != null)
+                umf.MessageJson = message;
+            return umf;
+        }
+
         /// <summary>
         /// Casts an untyped UMF instance to a typed instance
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="TBdy"></typeparam>
         /// <returns></returns>
-        public UMF<T> Cast<T>() where T : new() => UMF<T>.Deserialize(MessageJson)!;
-        /// <summary>
-        /// Casts an untyped UMF instance into a derived class of typed UMF
-        /// </summary>
-        /// <typeparam name="U"></typeparam>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public U Cast<U, T>() where U : UMF<T> where T : new() => Deserialize<U>(MessageJson)!;
-
+        public UMF<TBdy> ToUMF<TBdy>() where TBdy : new() => UMF<TBdy>.Deserialize(MessageJson)!;
     }
 }
 

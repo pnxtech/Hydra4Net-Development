@@ -1,13 +1,7 @@
 ﻿using HostingDemo.Models;
 using Hydra4Net.HostingExtensions;
 using Hydra4NET;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace HostingDemo
 {
@@ -44,31 +38,33 @@ namespace HostingDemo
             }
         }
 
-        public override async Task OnMessageReceived(UMF umf, string type, string? message, IHydra hydra)
+        public override async Task OnMessageReceived(IReceivedUMF umf, string type, string? message, IHydra hydra)
         {
             _logger.LogInformation($"Received message of type {type}");
             if (_mode == Modes.Sender && umf != null)
             {
-                await _sender.ProcessMessage(type, umf);
-                Console.WriteLine();
+                if (type == "start")
+                    await _sender.ProcessMessage(type, umf);
             }
         }
 
-        public override async Task OnQueueMessageReceived(UMF umf, string type, string? message, IHydra hydra)
+        public override async Task OnQueueMessageReceived(IReceivedUMF umf, string type, string? message, IHydra hydra)
         {
             if (type != Modes.Queuer)
                 return;
             try
             {
                 _logger.LogInformation($"Queuer: processing queued message from sender");
-                SharedMessage? sm = umf.Cast<SharedMessage, SharedMessageBody>();
+                if (type != "queuer")
+                    return;
+                UMF<SharedMessageBody>? sm = umf.ToUMF<SharedMessageBody>();
                 if (sm != null)
                 {
                     int? Id = sm?.Bdy?.Id ?? 0;
                     string? Msg = sm?.Bdy?.Msg ?? string.Empty;
                     if (Msg != string.Empty)
                     {
-                        SharedMessage sharedMessage = new()
+                        UMF<SharedMessageBody> sharedMessage = new()
                         {
                             To = "sender-svcs:/",
                             Frm = $"{hydra.InstanceID}@{hydra.ServiceName}:/",
@@ -93,10 +89,10 @@ namespace HostingDemo
                 }
                 else
                 {
-                    _logger.LogError("SharedMessage is null, body: {0}", umf.MessageJson);
+                    _logger.LogError("SharedMessage is null, body: {0}", message);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogError(e, "Queue handler failed");
             }
@@ -104,10 +100,10 @@ namespace HostingDemo
         }
 
         #region Optional
-        public override Task OnInit(IHydra hydra)
+        public override Task BeforeInit(IHydra hydra)
         {
             _logger.LogInformation($"Hydra initialized");
-            return base.OnInit(hydra);
+            return base.BeforeInit(hydra);
         }
         public override Task OnShutdown(IHydra hydra)
         {
@@ -119,7 +115,6 @@ namespace HostingDemo
             _logger.LogCritical(e, "A fatal error occurred initializing Hydra");
             return base.OnInitError(hydra, e);
         }
-
 
         #endregion Optional
     }

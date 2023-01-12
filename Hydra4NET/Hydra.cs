@@ -1,12 +1,11 @@
-﻿using System.Net;
-using System.Net.Sockets;
-using StackExchange.Redis;
-using System.Text.Json;
-using System.Diagnostics;
+﻿using StackExchange.Redis;
 using System;
-using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 /**
  MIT License
@@ -79,7 +78,7 @@ namespace Hydra4NET
 
         HydraConfigObject _config;
         #region Message delegate
-        public delegate Task UMFMessageHandler(UMF? umf, string type, string? message);
+        public delegate Task UMFMessageHandler(IReceivedUMF? umf, string type, string? message);
         private UMFMessageHandler? _MessageHandler = null;
         #endregion // Message delegate
 
@@ -100,7 +99,7 @@ namespace Hydra4NET
 
         #region Initialization
 
-      
+
 
         public async Task Init(HydraConfigObject? config = null)
         {
@@ -108,7 +107,7 @@ namespace Hydra4NET
                 throw new HydraInitException("This instance has already been initialized");
             if (config != null)
                 LoadConfig(config);
-            if(_config is null)
+            if (_config is null)
                 throw new HydraInitException("No HydraConfigObject has been provided");
             try
             {
@@ -118,7 +117,7 @@ namespace Hydra4NET
                 ProcessID = Process.GetCurrentProcess().Id;
                 Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
                 NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
-              
+
                 if (ServiceIP == null || ServiceIP == string.Empty)
                 {
                     using Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0);
@@ -149,7 +148,7 @@ namespace Hydra4NET
                     }
                     ServiceIP = selectedIP;
                 }
-                InstanceID = Guid.NewGuid().ToString().Replace("-", "");    
+                InstanceID = Guid.NewGuid().ToString().Replace("-", "");
                 _redis = ConnectionMultiplexer.Connect(_config.GetRedisConnectionString());
                 //validate conn string here and give detailed errors if something missing?
                 if (_redis != null && _redis.IsConnected)
@@ -167,14 +166,13 @@ namespace Hydra4NET
             {
                 throw;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 throw new HydraInitException("Failed to initialize Hydra", e);
             }
-            
+
         }
         #endregion
-
 
         public Task SendMessage(string to, string jsonUMFMessage)
             => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
@@ -211,7 +209,7 @@ namespace Hydra4NET
 
         public Task SendBroadcastMessage(string to, string jsonUMFMessage)
             => SendBroadcastMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
-        
+
         private async Task SendBroadcastMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
         {
             if (_redis != null)
@@ -220,7 +218,7 @@ namespace Hydra4NET
                 await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}", jsonUMFMessage);
             }
         }
-  
+
         public void OnMessageHandler(UMFMessageHandler handler)
         {
             if (handler != null)
@@ -228,7 +226,7 @@ namespace Hydra4NET
                 _MessageHandler = handler;
             }
         }
-        
+
         private async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
         {
             if (entry.Error == string.Empty && _redis != null)
@@ -240,10 +238,9 @@ namespace Hydra4NET
         public Task QueueMessage<T>(UMF<T> umfHeader) where T : new() =>
             QueueMessage(umfHeader?.GetRouteEntry(), umfHeader?.Serialize() ?? "");
 
-
         public Task QueueMessage(string jsonUMFMessage)
         {
-            UMF? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+            ReceivedUMF? umfHeader = ExtractUMFHeader(jsonUMFMessage);
             return QueueMessage(umfHeader?.GetRouteEntry(), jsonUMFMessage);
         }
 
@@ -264,10 +261,9 @@ namespace Hydra4NET
 
         public Task<string> GetQueueMessage() => GetQueueMessage(ServiceName ?? "");
 
-
         public async Task<string> MarkQueueMessage(string jsonUMFMessage, bool completed)
         {
-            UMF? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+            ReceivedUMF? umfHeader = ExtractUMFHeader(jsonUMFMessage);
             if (umfHeader != null && _redis != null)
             {
                 UMFRouteEntry entry = umfHeader.GetRouteEntry();
@@ -302,7 +298,7 @@ namespace Hydra4NET
         }
         public async ValueTask DisposeAsync()
         {
-            if(_redis != null)
+            if (_redis != null)
             {
                 await _redis.DisposeAsync();
                 _redis = null;
@@ -315,20 +311,14 @@ namespace Hydra4NET
         * ***********************************
         */
 
-        static UMF? ExtractUMFHeader(string jsonUMFString)
-        {
-            return JsonSerializer.Deserialize<UMF>(jsonUMFString, new JsonSerializerOptions()
-            {
-                PropertyNameCaseInsensitive = true
-            });
-        }
-        
+        static ReceivedUMF? ExtractUMFHeader(string jsonUMFString) => ReceivedUMF.Deserialize(jsonUMFString);
+
         async Task HandleMessage(ChannelMessage channelMessage)
         {
             string msg = (string?)channelMessage.Message ?? String.Empty;
             if (_MessageHandler != null)
             {
-                var umf = UMF.Deserialize(msg);           
+                var umf = ReceivedUMF.Deserialize(msg);
                 await _MessageHandler(umf, umf?.Typ ?? "", msg);
             }
         }
@@ -339,25 +329,20 @@ namespace Hydra4NET
             {
                 var db = _redis.GetDatabase();
                 var key = $"{_redis_pre_key}:{ServiceName}:service";
-                await db.StringSetAsync(key, Serialize(new RegistrationEntry
+                await db.StringSetAsync(key, StandardSerializer.Serialize(new RegistrationEntry
                 {
                     ServiceName = ServiceName,
                     Type = ServiceType,
-                    RegisteredOn = GetTimestamp()
+                    RegisteredOn = Iso8601.GetTimestamp()
                 }));
                 await db.KeyExpireAsync(key, TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
             }
-
             if (_redis != null)
             {
                 _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(HandleMessage);
                 _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(HandleMessage);
             }
         }
-
-      
     }
-
-
 }
 

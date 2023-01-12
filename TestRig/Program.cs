@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
-using Hydra4NET;
+﻿using Hydra4NET;
+using Microsoft.Extensions.Hosting;
 using TestRig;
 
 // Create an instance of Hydra4Net
@@ -29,7 +29,7 @@ if (config == null)
 
 // Setup an OnMessageHandler to recieve incoming UMF messages
 //
-hydra.OnMessageHandler(async (UMF? umf, string type, string? message) =>
+hydra.OnMessageHandler(async (IReceivedUMF? umf, string type, string? message) =>
 {
     Console.WriteLine($"{type}: {message}");
     if (type == "testMsg")

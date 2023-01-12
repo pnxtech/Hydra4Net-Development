@@ -11,7 +11,7 @@ using System.Threading.Tasks;
  */
 namespace Hydra4NET
 {
-    public partial class Hydra 
+    public partial class Hydra
     {
         #region Entry classses
         public class RegistrationEntry
@@ -63,13 +63,14 @@ namespace Hydra4NET
         #region Presence and Health check handling
         private string BuildHealthCheckEntry()
         {
+            var timestamp = Iso8601.GetTimestamp();
             HealthCheckEntry healthCheckEntry = new HealthCheckEntry()
             {
-                UpdatedOn = GetTimestamp(),
+                UpdatedOn = timestamp,
                 ServiceName = ServiceName,
                 InstanceID = InstanceID,
                 HostName = HostName,
-                SampledOn = GetTimestamp(),
+                SampledOn = timestamp,
                 ProcessID = ProcessID,
                 Architecture = Architecture,
                 Platform = "Dotnet",
@@ -87,7 +88,7 @@ namespace Hydra4NET
             var runtime = DateTime.Now - Process.GetCurrentProcess().StartTime;
             healthCheckEntry.UptimeSeconds = runtime.TotalSeconds;
 
-            return Serialize(healthCheckEntry);
+            return StandardSerializer.Serialize(healthCheckEntry);
         }
 
         private string BuildPresenceNodeEntry()
@@ -102,9 +103,9 @@ namespace Hydra4NET
                 Ip = ServiceIP,
                 Port = ServicePort,
                 HostName = HostName,
-                UpdatedOn = GetTimestamp()
+                UpdatedOn = Iso8601.GetTimestamp()
             };
-            return Serialize(presenceNodeEntry);
+            return StandardSerializer.Serialize(presenceNodeEntry);
         }
 
         private async Task UpdatePresence()
@@ -125,7 +126,6 @@ namespace Hydra4NET
             catch (OperationCanceledException)
             {
             }
-           
         }
 
         private async Task PresenceEvent()
@@ -149,12 +149,10 @@ namespace Hydra4NET
             }
         }
 
-   
         public async Task<List<PresenceNodeEntry>> GetPresence(string serviceName)
         {
             List<string> instanceIds = new List<string>();
             List<PresenceNodeEntry> serviceEntries = new List<PresenceNodeEntry>();
-
             if (_server != null && _redis != null)
             {
                 foreach (var key in _server.Keys(pattern: $"*:{serviceName}:*:presence"))
@@ -162,9 +160,7 @@ namespace Hydra4NET
                     string segments = key.ToString();
                     var segmentParts = segments.Split(":");
                     if (segmentParts.Length > 4)
-                    {
                         instanceIds.Add(segmentParts[3]);
-                    }
                 }
                 foreach (var id in instanceIds)
                 {
@@ -195,8 +191,6 @@ namespace Hydra4NET
             }
             return serviceEntries;
         }
-
-      
 
         #endregion // Presence and Health check handling
     }

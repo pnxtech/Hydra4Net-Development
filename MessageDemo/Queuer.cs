@@ -12,20 +12,20 @@ public class Queuer : QueueProcessor
         _hydra = hydra;
     }
 
-    protected override async Task ProcessMessage(UMF umf, string type, string message)
+    protected override async Task ProcessMessage(IReceivedUMF? umf, string type, string message)
     {
         Console.WriteLine("Queuer: retrieved message from queue");
         if (type == "queuer")
         {
             Console.WriteLine($"Queuer: processing queued message from sender");
-            SharedMessage? sm = SharedMessage.Deserialize<SharedMessage>(message);
+            UMF<SharedMessageBody>? sm = umf.ToUMF<SharedMessageBody>();
             if (sm != null)
             {
                 int? Id = sm?.Bdy?.Id ?? 0;
                 string? Msg = sm?.Bdy?.Msg ?? string.Empty;
-                if (Msg != string.Empty) 
+                if (Msg != string.Empty)
                 {
-                    SharedMessage sharedMessage = new()
+                    UMF<SharedMessageBody> sharedMessage = new()
                     {
                         To = "sender-svcs:/",
                         Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/",

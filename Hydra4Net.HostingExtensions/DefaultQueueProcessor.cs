@@ -1,21 +1,24 @@
 ﻿using Hydra4NET;
+using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Hydra4Net.HostingExtensions
 {
     public sealed class DefaultQueueProcessor : QueueProcessor
     {
-        private IHydraEventsHandler _handler;
+        private IServiceProvider _services;
 
-        public DefaultQueueProcessor(IHydra hydra, IHydraEventsHandler handler) : base(hydra)
+        public DefaultQueueProcessor(IHydra hydra, IServiceProvider services) : base(hydra)
         {
-            _handler = handler;
+            _services = services;
         }
-        protected override Task ProcessMessage(UMF umf, string type, string message) => _handler.OnQueueMessageReceived(umf, type, message, Hydra);
-       
+
+        protected override async Task ProcessMessage(IReceivedUMF? umf, string type, string message)
+        {
+            using var scope = _services.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<IHydraEventsHandler>()
+                .OnQueueMessageReceived(umf, type, message, Hydra);
+        }
     }
 }

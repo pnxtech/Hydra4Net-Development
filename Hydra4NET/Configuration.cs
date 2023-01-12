@@ -65,7 +65,4 @@ namespace Hydra4NET
         public int Db { get; set; }
         public string? Options { get; set; }
     }
-
-    
-
 }

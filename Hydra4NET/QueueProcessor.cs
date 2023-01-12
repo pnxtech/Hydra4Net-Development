@@ -1,16 +1,15 @@
 ﻿using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Hydra4NET
 {
-
-
     public abstract class QueueProcessor : IDisposable
     {
         private readonly IHydra _hydra;
+
         protected IHydra Hydra => _hydra;
+
         Timer _timer;
 
         /**
@@ -32,8 +31,9 @@ namespace Hydra4NET
             _hydra = hydra;
 
         }
-        protected abstract Task ProcessMessage(UMF? umf, string type, string message);
-       
+
+        protected abstract Task ProcessMessage(IReceivedUMF? umf, string type, string message);
+
         public void Init(CancellationToken ct = default)
         {
             //period = 0 means dont automatically restart. we manually start when done
@@ -42,7 +42,7 @@ namespace Hydra4NET
                 string message = await _hydra.GetQueueMessage();
                 if (message != String.Empty)
                 {
-                    UMF? umf = UMF.Deserialize(message);
+                    IReceivedUMF? umf = ReceivedUMF.Deserialize(message);
                     if (umf != null)
                     {
                         await ProcessMessage(umf, umf.Typ, message);
@@ -58,7 +58,6 @@ namespace Hydra4NET
             //when cancelled, it will stop the timer
             ct.Register(() => _timer.Change(Timeout.Infinite, 0));
         }
-      
 
         private void CalculateSlidingDuration()
         {

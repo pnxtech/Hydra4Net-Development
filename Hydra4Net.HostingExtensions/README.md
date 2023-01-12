@@ -13,7 +13,7 @@ Hydra4Net is under active development and existing functionality may be dramatic
 
 More about Hydra and related open source projects can be found at: https://github.com/pnxtech where other implementations of Hydra for NodeJS, Python and Dart can be found.
 
-For an example of Hydra4Net messaging in action see the [MessageDemo example](https://github.com/pnxtech/Hydra4Net-Development/tree/master/MessageDemo)
+For an example of Hydra4Net messaging in action see the [HostingMessageDemo example](https://github.com/pnxtech/Hydra4Net-Development/tree/master/HostingMessageDemo)
 
 Nuget packaged versions of Hydra4Net are available at: [https://www.nuget.org/packages/Hydra4NET](https://www.nuget.org/packages/Hydra4NET)
 
@@ -35,7 +35,7 @@ The following features are offered but not required for use. In production cases
 ### A few words about messaging
 Hydra4Net, as well as any other Hydra implementation, depends on the use of JSON-based messages.  More specifically, JSON messages need to be packed in a format known as UMF - [Universal Messaging Format](https://github.com/pnxtech/umf/blob/master/umf.md).  The reason for this requirement is because UMF has support for messaging routing and queuing - where as plain JSON messages do not. Hydra4Net specifically uses the `short form` UMF.
 
-Hydra4Net has built-in support for UMF via its UMF and UMFBase classes.
+Hydra4Net has built-in support for UMF via its `UMF<TBdy>` classes.
 
 ## The basics
 

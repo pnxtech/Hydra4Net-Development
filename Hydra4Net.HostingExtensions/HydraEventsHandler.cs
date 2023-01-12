@@ -1,18 +1,16 @@
 ﻿using Hydra4NET;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Hydra4Net.HostingExtensions
 {
     public abstract class HydraEventsHandler : IHydraEventsHandler
     {
-        public abstract Task OnMessageReceived(UMF umf, string type, string? message, IHydra hydra);
-        public abstract Task OnQueueMessageReceived(UMF umf, string type, string? message, IHydra hydra);
-   
-        public virtual Task OnInit(IHydra hydra)
+        public abstract Task OnMessageReceived(IReceivedUMF? umf, string type, string? message, IHydra hydra);
+
+        public abstract Task OnQueueMessageReceived(IReceivedUMF? umf, string type, string? message, IHydra hydra);
+
+        public virtual Task BeforeInit(IHydra hydra)
         {
             return Task.CompletedTask;
         }
@@ -25,7 +23,5 @@ namespace Hydra4Net.HostingExtensions
         {
             return Task.CompletedTask;
         }
-
-     
     }
 }

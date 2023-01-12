@@ -55,7 +55,7 @@ public class App
         Console.WriteLine();
 
         // Setup an OnMessageHandler to recieve incoming messages
-        hydra.OnMessageHandler(async (UMF? umf, string type, string? message) =>
+        hydra.OnMessageHandler(async (IReceivedUMF? umf, string type, string? message) =>
         {
             Console.WriteLine($"Sender: received message of type {type}");
             if (sender != null && message != null)

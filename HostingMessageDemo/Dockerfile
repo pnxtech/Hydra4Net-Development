@@ -5,18 +5,18 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-COPY ["HostingDemo/HostingDemo.csproj", "HostingDemo/"]
+COPY ["HostingMessageDemo/HostingMessageDemo.csproj", "HostingMessageDemo/"]
 COPY ["Hydra4Net.HostingExtensions/Hydra4Net.HostingExtensions.csproj", "Hydra4Net.HostingExtensions/"]
 COPY ["Hydra4NET/Hydra4NET.csproj", "Hydra4NET/"]
-RUN dotnet restore "HostingDemo/HostingDemo.csproj"
+RUN dotnet restore "HostingMessageDemo/HostingMessageDemo.csproj"
 COPY . .
-WORKDIR "/src/HostingDemo"
-RUN dotnet build "HostingDemo.csproj" -c Release -o /app/build
+WORKDIR "/src/HostingMessageDemo"
+RUN dotnet build "HostingMessageDemo.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "HostingDemo.csproj" -c Release -o /app/publish
+RUN dotnet publish "HostingMessageDemo.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "HostingDemo.dll"]
+ENTRYPOINT ["dotnet", "HostingMessageDemo.dll"]
