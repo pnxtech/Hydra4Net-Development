@@ -5,12 +5,12 @@
     <!--<ImplicitUsings>enable</ImplicitUsings>-->
     <Nullable>enable</Nullable>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Title>Hydra for .NET</Title>
+    <Title>Microsoft.Hosting.Extensions Helpers for Hydra for .NET</Title>
     <SignAssembly>True</SignAssembly>
     <AssemblyVersion>0.0.9</AssemblyVersion>
     <FileVersion>0.0.9</FileVersion>
     <Version>0.0.9</Version>
-    <Description>Hydra for .NET is a library for building microservices.</Description>
+    <Description>Helper extensions for Microsoft.Hosting.Extensions and Hydra for .NET</Description>
     <Copyright>2022 Carlos Justiniano, Justin Couch, and Contributors</Copyright>
     <PackageTags>hydra microservice</PackageTags>
     <PackageReleaseNotes>This is a work-in-progress experimental release.</PackageReleaseNotes>
