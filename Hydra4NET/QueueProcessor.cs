@@ -7,10 +7,9 @@ namespace Hydra4NET
     public abstract class QueueProcessor : IDisposable
     {
         private readonly IHydra _hydra;
-
         protected IHydra Hydra => _hydra;
 
-        Timer _timer;
+        Timer? _timer;
 
         /**
          * The BaseDelay has to be a non zero value for two reasons:
@@ -53,8 +52,9 @@ namespace Hydra4NET
                 {
                     CalculateSlidingDuration();
                 }
-                _timer.Change((int)_slidingDuration, 0);
+                _timer?.Change((int)_slidingDuration, 0);
             }, null, 0, 0);
+
             //when cancelled, it will stop the timer
             ct.Register(() => _timer.Change(Timeout.Infinite, 0));
         }

@@ -14,6 +14,7 @@ namespace Hydra4Net.HostingExtensions
         {
             return Task.CompletedTask;
         }
+
         public virtual Task OnShutdown(IHydra hydra)
         {
             return Task.CompletedTask;

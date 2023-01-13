@@ -7,33 +7,13 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-/**
- MIT License
- Copyright (c) 2022 Carlos Justiniano and contributors
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
- The above copyright notice and this permission notice shall be included in all
- copies or substantial portions of the Software.
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- SOFTWARE.
-*/
-
 namespace Hydra4NET
 {
-    /**
- * Hydra is the main class for the Hydra4NET library.
- * It is responsible for initializing the Hydra library and
- * shutting it down.
- */
+     /**
+     * Hydra is the main class for the Hydra4NET library.
+     * It is responsible for initializing the Hydra library and
+     * shutting it down.
+     */
     public partial class Hydra : IHydra
     {
         #region Private Consts
@@ -76,13 +56,13 @@ namespace Hydra4NET
 
         #endregion // Class variables
 
-        HydraConfigObject _config;
+        HydraConfigObject? _config;
         #region Message delegate
         public delegate Task UMFMessageHandler(IReceivedUMF? umf, string type, string? message);
         private UMFMessageHandler? _MessageHandler = null;
         #endregion // Message delegate
 
-        public Hydra(HydraConfigObject config = null)
+        public Hydra(HydraConfigObject config)
         {
             LoadConfig(config);
         }
@@ -153,7 +133,7 @@ namespace Hydra4NET
                 //validate conn string here and give detailed errors if something missing?
                 if (_redis != null && _redis.IsConnected)
                 {
-                    _server = _redis.GetServer($"{_config.Hydra.Redis.Host}:{_config.Hydra.Redis.Port}");
+                    _server = _redis.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
                     await RegisterService();
                     Initialized = true;
                 }
@@ -229,7 +209,7 @@ namespace Hydra4NET
 
         private async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
         {
-            if (entry.Error == string.Empty && _redis != null)
+            if (entry?.Error == string.Empty && _redis != null)
             {
                 await _redis.GetDatabase().ListLeftPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
             }

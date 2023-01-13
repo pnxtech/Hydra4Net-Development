@@ -99,7 +99,7 @@ namespace Hydra4NET
             set { _Timestamp = value; }
         }
 
-        public virtual object Bdy { get; set; }
+        public virtual object? Bdy { get; set; }
 
         /// <summary>
         ///Parses a string based UMF route into individual route entries.
@@ -179,8 +179,6 @@ namespace Hydra4NET
         /// </summary>
         /// <returns></returns>
         public UMFRouteEntry GetRouteEntry() => ParseRoute(To);
-
-
     }
 
     /// <summary>
@@ -190,10 +188,7 @@ namespace Hydra4NET
     public class UMF<TBdy> : UMFBase, IUMF<TBdy> where TBdy : new()
     {
         public new TBdy Bdy { get; set; } = new TBdy();
-        public UMF() : base()
-        {
-
-        }
+        public UMF() : base() { }
 
         /// <summary>
         /// Deserializes a UMF JSON message into a typed UMF class instance
@@ -220,7 +215,7 @@ namespace Hydra4NET
         /// The original message's JSON value
         /// </summary>
         [JsonIgnore] //prevent System.Text.Json from serializing / deserializing
-        public string MessageJson { get; private set; }
+        public string? MessageJson { get; private set; } // or = String.Empty
 
         /// <summary>
         /// Deserializes a UMF JSON message into an untyped UMF class instance
@@ -240,7 +235,7 @@ namespace Hydra4NET
         /// </summary>
         /// <typeparam name="TBdy"></typeparam>
         /// <returns></returns>
-        public UMF<TBdy> ToUMF<TBdy>() where TBdy : new() => UMF<TBdy>.Deserialize(MessageJson)!;
+        public UMF<TBdy> ToUMF<TBdy>() where TBdy : new() => UMF<TBdy>.Deserialize(MessageJson ?? "")!;
     }
 }
 

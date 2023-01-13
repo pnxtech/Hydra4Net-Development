@@ -9,7 +9,7 @@ namespace HostingDemo
     {
         private ILogger<SampleMessageHandler> _logger;
 
-        private string _mode;
+        private string _mode = String.Empty;
         private Sender _sender;
 
         public SampleMessageHandler(ILogger<SampleMessageHandler> logger, HydraConfigObject config, Sender sender)
@@ -38,7 +38,7 @@ namespace HostingDemo
             }
         }
 
-        public override async Task OnMessageReceived(IReceivedUMF umf, string type, string? message, IHydra hydra)
+        public override async Task OnMessageReceived(IReceivedUMF? umf, string type, string? message, IHydra hydra)
         {
             _logger.LogInformation($"Received message of type {type}");
             if (_mode == Modes.Sender && umf != null)
@@ -48,16 +48,16 @@ namespace HostingDemo
             }
         }
 
-        public override async Task OnQueueMessageReceived(IReceivedUMF umf, string type, string? message, IHydra hydra)
+        public override async Task OnQueueMessageReceived(IReceivedUMF? umf, string type, string? message, IHydra hydra)
         {
-            if (type != Modes.Queuer)
+            if (type != Modes.Queuer || message == null)
                 return;
             try
             {
                 _logger.LogInformation($"Queuer: processing queued message from sender");
                 if (type != "queuer")
                     return;
-                UMF<SharedMessageBody>? sm = umf.ToUMF<SharedMessageBody>();
+                UMF<SharedMessageBody>? sm = umf?.ToUMF<SharedMessageBody>();
                 if (sm != null)
                 {
                     int? Id = sm?.Bdy?.Id ?? 0;

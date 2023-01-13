@@ -18,7 +18,7 @@ public class Queuer : QueueProcessor
         if (type == "queuer")
         {
             Console.WriteLine($"Queuer: processing queued message from sender");
-            UMF<SharedMessageBody>? sm = umf.ToUMF<SharedMessageBody>();
+            UMF<SharedMessageBody>? sm = umf?.ToUMF<SharedMessageBody>();
             if (sm != null)
             {
                 int? Id = sm?.Bdy?.Id ?? 0;
