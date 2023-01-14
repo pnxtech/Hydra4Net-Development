@@ -81,6 +81,8 @@ namespace Hydra4NET
             set { _Mid = value; }
         }
 
+        public string? Rmid { get; set; }
+
         public string Typ
         {
             get { return _Type; }
@@ -240,7 +242,7 @@ namespace Hydra4NET
         /// </summary>
         /// <typeparam name="TBdy"></typeparam>
         /// <returns></returns>
-        public UMF<TBdy> ToUMF<TBdy>() where TBdy : new() => UMF<TBdy>.Deserialize(MessageJson)!;
+        public IUMF<TBdy> ToUMF<TBdy>() where TBdy : new() => UMF<TBdy>.Deserialize(MessageJson)!;
     }
 }
 

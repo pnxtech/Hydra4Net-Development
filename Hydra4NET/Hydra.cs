@@ -1,4 +1,5 @@
-﻿using StackExchange.Redis;
+﻿using Hydra4NET.Internal;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -78,7 +79,7 @@ namespace Hydra4NET
 
         HydraConfigObject _config;
         #region Message delegate
-        public delegate Task UMFMessageHandler(IReceivedUMF? umf, string type, string? message);
+        public delegate Task UMFMessageHandler(IInboundMessage msg);
         private UMFMessageHandler? _MessageHandler = null;
         #endregion // Message delegate
 
@@ -177,7 +178,7 @@ namespace Hydra4NET
         public Task SendMessage(string to, string jsonUMFMessage)
             => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
-        public Task SendMessage<T>(UMF<T> message) where T : new()
+        public Task SendMessage<T>(IUMF<T> message) where T : new()
             => SendMessage(message.GetRouteEntry(), message.Serialize());
 
         private async Task SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
@@ -204,7 +205,7 @@ namespace Hydra4NET
             }
         }
 
-        public Task SendBroadcastMessage<T>(UMF<T> message) where T : new()
+        public Task SendBroadcastMessage<T>(IUMF<T> message) where T : new()
             => SendBroadcastMessage(message.GetRouteEntry(), message.Serialize());
 
         public Task SendBroadcastMessage(string to, string jsonUMFMessage)
@@ -235,7 +236,7 @@ namespace Hydra4NET
             }
         }
 
-        public Task QueueMessage<T>(UMF<T> umfHeader) where T : new() =>
+        public Task QueueMessage<T>(IUMF<T> umfHeader) where T : new() =>
             QueueMessage(umfHeader?.GetRouteEntry(), umfHeader?.Serialize() ?? "");
 
         public Task QueueMessage(string jsonUMFMessage)
@@ -319,9 +320,22 @@ namespace Hydra4NET
             if (_MessageHandler != null)
             {
                 var umf = ReceivedUMF.Deserialize(msg);
-                await _MessageHandler(umf, umf?.Typ ?? "", msg);
+                var inMsg = new InboundMessage
+                {
+                    ReceivedUMF = umf,
+                    Type = umf?.Typ ?? "",
+                    MessageJson = msg,
+                };
+                await _MessageHandler(inMsg);
+                if (umf != null)
+                {
+                    await _responseHandler.TryResolveResponses(inMsg);
+                }
             }
         }
+
+        private ResponseHandler _responseHandler = new ResponseHandler();
+
 
         private async Task RegisterService()
         {
@@ -342,6 +356,54 @@ namespace Hydra4NET
                 _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(HandleMessage);
                 _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(HandleMessage);
             }
+        }
+
+        public IUMF<TBdy> CreateUMF<TBdy>(string to, string type, TBdy bdy, string? rmid = null) where TBdy : new()
+        {
+            //if no route specified then add default route
+            if (!to.Contains(":"))
+                to += ":/";
+            return new UMF<TBdy>()
+            {
+                To = to,
+                Typ = type,
+                Frm = GetServiceFrom(),
+                Bdy = bdy,
+                Rmid = rmid
+            };
+        }
+        //do we need routes in from?
+        public string GetServiceFrom() => $"{InstanceID}@{ServiceName}:/";
+
+        public async Task<IInboundMessage> GetUMFResponse<TMsgBdy>(IUMF<TMsgBdy> umf, string? expectedType = null
+            , TimeSpan? timeout = null, CancellationToken ct = default) where TMsgBdy : new()
+        {
+            if (umf is null)
+                throw new ArgumentNullException(nameof(umf));
+            timeout ??= TimeSpan.FromSeconds(30);
+            var tcs = new TaskCompletionSource<IInboundMessage>();
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            //prevent this task from waiting forever.
+            cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
+            _responseHandler.RegisterResponse(umf.Mid, expectedType, tcs);
+            try
+            {
+                await SendMessage(umf);
+                return await tcs.Task;
+            }
+            finally
+            {
+                _responseHandler.ClearResponse(umf.Mid, expectedType);
+            }
+        }
+
+        public async Task<IInboundMessageStream> GetUMFResponseStream<TMsgBdy>(IUMF<TMsgBdy> umf) where TMsgBdy : new()
+        {
+            if (umf is null)
+                throw new ArgumentNullException(nameof(umf));
+            var handler = _responseHandler.RegisterResponseStream(umf.Mid);
+            await SendMessage(umf);
+            return handler;
         }
     }
 }

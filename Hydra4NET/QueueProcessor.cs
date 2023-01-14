@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hydra4NET.Internal;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -29,31 +30,58 @@ namespace Hydra4NET
         public QueueProcessor(IHydra hydra)
         {
             _hydra = hydra;
-
         }
 
-        protected abstract Task ProcessMessage(IReceivedUMF? umf, string type, string message);
+        protected abstract Task ProcessMessage(IInboundMessage msg);
 
+        Func<Exception, Task>? _errorHandler;
+
+        public void OnDequeueError(Func<Exception, Task> handler)
+        {
+            _errorHandler = handler;
+        }
         public void Init(CancellationToken ct = default)
         {
             //period = 0 means dont automatically restart. we manually start when done
             _timer = new Timer(async (o) =>
             {
-                string message = await _hydra.GetQueueMessage();
-                if (message != String.Empty)
+                try
                 {
-                    IReceivedUMF? umf = ReceivedUMF.Deserialize(message);
-                    if (umf != null)
+                    string message = await _hydra.GetQueueMessage();
+                    if (message != String.Empty)
                     {
-                        await ProcessMessage(umf, umf.Typ, message);
-                        _slidingDuration = SlidingDuration.BaseDelay;
+                        IReceivedUMF? umf = ReceivedUMF.Deserialize(message);
+                        if (umf != null)
+                        {
+                            await ProcessMessage(new InboundMessage
+                            {
+                                ReceivedUMF = umf,
+                                Type = umf?.Typ ?? "",
+                                MessageJson = message
+                            });
+                            _slidingDuration = SlidingDuration.BaseDelay;
+                        }
+                    }
+                    else
+                    {
+                        CalculateSlidingDuration();
                     }
                 }
-                else
+                catch (Exception e)
                 {
-                    CalculateSlidingDuration();
+                    if (_errorHandler != null)
+                    {
+                        try
+                        {
+                            await _errorHandler(e);
+                        }
+                        catch { }
+                    }
                 }
-                _timer.Change((int)_slidingDuration, 0);
+                finally
+                {
+                    _timer.Change((int)_slidingDuration, 0);
+                }
             }, null, 0, 0);
             //when cancelled, it will stop the timer
             ct.Register(() => _timer.Change(Timeout.Infinite, 0));

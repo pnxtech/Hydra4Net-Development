@@ -25,13 +25,13 @@ services:
         mode: ingress
     deploy:
       replicas: 1
-  sender:
-    image: 'hostingdemo'
-    environment:
-      HydraConfig__Hydra__ServiceType: sender
-      HydraConfig__Hydra__ServiceName: sender-svcs
-    depends_on:
-      - redis
+  # sender:
+  #   image: 'hostingdemo'
+  #   environment:
+  #     HydraConfig__Hydra__ServiceType: sender
+  #     HydraConfig__Hydra__ServiceName: sender-svcs
+  #   depends_on:
+  #     - redis
   queuer:
     image: 'hostingdemo'
     environment:

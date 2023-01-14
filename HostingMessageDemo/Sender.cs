@@ -23,14 +23,14 @@ public class Sender
                 await ProcessCommandMessage(umf);
                 break;
             case "complete":
-                ProcessSenderMessage(umf);
+                ProcessCompleteMessage(umf);
                 break;
         }
     }
 
     private async Task ProcessCommandMessage(IReceivedUMF umf)
     {
-        UMF<CommandMessageBody> msg = umf.ToUMF<CommandMessageBody>();
+        IUMF<CommandMessageBody> msg = umf.ToUMF<CommandMessageBody>();
         //CommandMessage? msg = umf.Cast<CommandMessage, CommandMessageBody>();
         if (msg != null)
         {
@@ -40,17 +40,25 @@ public class Sender
                     _logger.LogInformation("Sender: queuing message for Queuer");
                     await QueueMessageForQueuer();
                     break;
+                case "start-respond":
+                    _logger.LogInformation("Sender: sending message for response");
+                    await SendResponseMessage();
+                    break;
+                case "start-respond-stream":
+                    _logger.LogInformation("Sender: sending message for response");
+                    await SendResponseStreamMessage();
+                    break;
             }
         }
     }
 
-    private void ProcessSenderMessage(IReceivedUMF umf)
+    private void ProcessCompleteMessage(IReceivedUMF umf)
     {
-        UMF<SharedMessageBody> msg = umf.ToUMF<SharedMessageBody>();
+        IUMF<SharedMessageBody> msg = umf.ToUMF<SharedMessageBody>();
         //SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
         if (msg != null)
         {
-            _logger.LogInformation($"Sender: message received {msg.Bdy?.Msg}");
+            _logger.LogInformation($"Sender: complete message received {msg.Bdy?.Msg}");
         }
     }
 
@@ -59,15 +67,56 @@ public class Sender
         UMF<SharedMessageBody> sharedMessage = new()
         {
             To = "queuer-svcs:/",
-            Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/",
+            Frm = _hydra.GetServiceFrom(),
             Typ = "queuer",
             Bdy = new()
             {
-                Id = 1,
+                Id = _rand.Next(),
                 Msg = "Sample job queue message"
             }
         };
         _logger.LogDebug($"Sending message for queuer: {sharedMessage.Serialize()}");
         await _hydra.QueueMessage(sharedMessage);
+    }
+    Random _rand = new Random();
+    private async Task SendResponseMessage()
+    {
+        try
+        {
+            var msg = _hydra.CreateUMF<SharedMessageBody>("queuer-svcs:/", "respond", new()
+            {
+                Id = _rand.Next(),
+                Msg = "Requesting response..."
+            });
+            IInboundMessage resp = await _hydra.GetUMFResponse(msg, "response");
+            IUMF<SharedMessageBody>? umf = resp?.ReceivedUMF?.ToUMF<SharedMessageBody>();
+            _logger.LogInformation($"Single response received: {umf?.Bdy?.Msg}");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "failed to receive single message");
+        }
+    }
+    private async Task SendResponseStreamMessage()
+    {
+        var msg = _hydra.CreateUMF<SharedMessageBody>("queuer-svcs:/", "respond-stream", new()
+        {
+            Id = _rand.Next(),
+            Msg = "Requesting response..."
+        });
+        using (IInboundMessageStream resp = await _hydra.GetUMFResponseStream(msg))
+        {
+            await foreach (var rMsg in resp.EnumerateMessagesAsync())
+            {
+                var rUmf = rMsg.ReceivedUMF?.ToUMF<SharedMessageBody>();
+                if (rMsg?.Type == "response-stream")
+                    _logger.LogInformation($"Response stream message received: {rUmf?.Bdy?.Msg}");
+                else if (rMsg?.Type == "response-stream-complete")
+                {
+                    _logger.LogInformation("Response stream complete");
+                    break;
+                }
+            }
+        }
     }
 }

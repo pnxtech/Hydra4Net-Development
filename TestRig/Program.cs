@@ -29,18 +29,18 @@ if (config == null)
 
 // Setup an OnMessageHandler to recieve incoming UMF messages
 //
-hydra.OnMessageHandler(async (IReceivedUMF? umf, string type, string? message) =>
+hydra.OnMessageHandler(async (IInboundMessage? msg) =>
 {
-    Console.WriteLine($"{type}: {message}");
-    if (type == "testMsg")
+    Console.WriteLine($"{msg.Type}: {msg.MessageJson}");
+    if (msg.Type == "testMsg")
     {
-        TestMsg? tm = hydraTests.ParseTestMsg(message ?? "");
+        TestMsg? tm = hydraTests.ParseTestMsg(msg.MessageJson ?? "");
         Console.WriteLine($"msg: {tm?.Bdy?.Msg}, id: {tm?.Bdy?.Id}");
         await hydraTests.SendMessage();
     }
-    else if (type == "ping")
+    else if (msg.Type == "ping")
     {
-        PingMsg? pm = hydraTests.ParsePingMsg(message ?? "");
+        PingMsg? pm = hydraTests.ParsePingMsg(msg.MessageJson ?? "");
         Console.WriteLine($"message: {pm?.Bdy?.Message}");
     }
     await Task.Delay(1);

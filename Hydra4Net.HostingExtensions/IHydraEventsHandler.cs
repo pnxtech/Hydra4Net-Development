@@ -14,7 +14,7 @@ namespace Hydra4Net.HostingExtensions
         /// <param name="umf"></param>
         /// <param name="hydra"></param>
         /// <returns></returns>
-        Task OnMessageReceived(IReceivedUMF? umf, string type, string? message, IHydra hydra);
+        Task OnMessageReceived(IInboundMessage msg, IHydra hydra);
 
         /// <summary>
         /// Called when a new enqued message is received by Hydra
@@ -24,7 +24,7 @@ namespace Hydra4Net.HostingExtensions
         /// <param name="umf"></param>
         /// <param name="hydra"></param>
         /// <returns></returns>
-        Task OnQueueMessageReceived(IReceivedUMF? umf, string type, string? message, IHydra hydra);
+        Task OnQueueMessageReceived(IInboundMessage msg, IHydra hydra);
 
         /// <summary>
         /// Called before Hydra is initialized at application startup
@@ -40,6 +40,14 @@ namespace Hydra4Net.HostingExtensions
         /// <param name="e"></param>
         /// <returns></returns>
         Task OnInitError(IHydra hydra, Exception exception);
+
+        /// <summary>
+        /// Called after a Hydra dequeueing error occurs
+        /// </summary>
+        /// <param name="hydra"></param>
+        /// <param name="e"></param>
+        /// <returns></returns>
+        Task OnDequeueError(IHydra hydra, Exception e);
 
         /// <summary>
         /// Called on application shutdown

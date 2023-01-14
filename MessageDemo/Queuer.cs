@@ -12,13 +12,13 @@ public class Queuer : QueueProcessor
         _hydra = hydra;
     }
 
-    protected override async Task ProcessMessage(IReceivedUMF? umf, string type, string message)
+    protected override async Task ProcessMessage(IInboundMessage msg)
     {
         Console.WriteLine("Queuer: retrieved message from queue");
-        if (type == "queuer")
+        if (msg.Type == "queuer")
         {
             Console.WriteLine($"Queuer: processing queued message from sender");
-            UMF<SharedMessageBody>? sm = umf.ToUMF<SharedMessageBody>();
+            IUMF<SharedMessageBody>? sm = msg.ReceivedUMF?.ToUMF<SharedMessageBody>();
             if (sm != null)
             {
                 int? Id = sm?.Bdy?.Id ?? 0;
@@ -37,7 +37,7 @@ public class Queuer : QueueProcessor
                         }
                     };
                     string json = sharedMessage.Serialize();
-                    await _hydra.MarkQueueMessage(message, true);
+                    await _hydra.MarkQueueMessage(msg.MessageJson, true);
                     await _hydra.SendMessage(sharedMessage.To, json);
                     Console.WriteLine($"Queuer: sent completion message back to sender");
                 }

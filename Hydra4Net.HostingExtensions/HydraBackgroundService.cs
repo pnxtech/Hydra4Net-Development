@@ -43,12 +43,11 @@ namespace Hydra4Net.HostingExtensions
         {
             try
             {
-
-                _hydra.OnMessageHandler((umf, type, msg)
-                    => PerformHandlerAction(e => e.OnMessageReceived(umf, type, msg, _hydra)));
+                _hydra.OnMessageHandler((msg) => PerformHandlerAction(e => e.OnMessageReceived(msg, _hydra)));
                 await PerformHandlerAction(e => e.BeforeInit(_hydra));
                 await _hydra.Init();
                 _queue.Init(stoppingToken);
+                _queue.OnDequeueError(e => PerformHandlerAction(h => h.OnDequeueError(_hydra, e)));
                 _logger.LogInformation($"Hydra {_hydra.ServiceName} ({_hydra.InstanceID}) listening on {_hydra.ServiceIP}");
             }
             catch (Exception e)

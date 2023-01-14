@@ -12,13 +12,16 @@ namespace Hydra4Net.HostingExtensions
         public DefaultQueueProcessor(IHydra hydra, IServiceProvider services) : base(hydra)
         {
             _services = services;
+
         }
 
-        protected override async Task ProcessMessage(IReceivedUMF? umf, string type, string message)
+        protected override async Task ProcessMessage(IInboundMessage msg)
         {
             using var scope = _services.CreateScope();
             await scope.ServiceProvider.GetRequiredService<IHydraEventsHandler>()
-                .OnQueueMessageReceived(umf, type, message, Hydra);
+                .OnQueueMessageReceived(msg, Hydra);
         }
+
+
     }
 }
