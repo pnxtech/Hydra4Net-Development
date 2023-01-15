@@ -143,10 +143,10 @@ namespace HostingDemo
                     await hydra.SendMessage(sharedMessage);
                     _logger.LogInformation($"Queuer: sent response stream message back to sender");
                 }
-                IUMF<SharedMessageBody> completeMsg = hydra.CreateUMFResponse(sm!, "response-stream", new SharedMessageBody()
+                IUMF<SharedMessageBody> completeMsg = hydra.CreateUMFResponse(sm!, "response-stream-complete", new SharedMessageBody()
                 {
                     Id = Id,
-                    Msg = $"Queuer: sending response stream to {Msg} with ID of {Id}"
+                    Msg = $"Queuer: sending complete response stream to {Msg} with ID of {Id}"
                 });
                 await hydra.SendMessage(completeMsg);
                 _logger.LogInformation($"Queuer: sent response stream complete message back to sender");

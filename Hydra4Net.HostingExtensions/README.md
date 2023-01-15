@@ -86,7 +86,7 @@ services
 ```
 
 
-4. Make sure to implement the `IHydraEventsHandler` interface and pass the implementation to `AddHydraEventHandler()` above.  You can also use the helper base class `HydraEventsHandler`, which only requires you to implement `OnMessageReceived` and `OnQueueMessageReceived`; you can optionally override the other methods.
+4. Make sure to implement the `IHydraEventsHandler` interface and pass the implementation to `AddHydraEventHandler()` above.  You can also use the helper base class `HydraEventsHandler`, which only requires you to implement `OnMessageReceived`; you can optionally override the other methods.
 
 5. Use Hydra4Net to send and receive messages.
 The example below shows that a delegate will be called when messages are received. The delegate is passed the untyped/serialized message object, the message type, and the message body. The message object can then be cast to the desired concrete type based on the `type` parameter using the `Cast` method.
@@ -105,7 +105,7 @@ public override async Task OnQueueMessageReceived(UMF umf, string type, string? 
 {
     if (type == "type2")
     {
-        UMF<CommandMessageBody> castedMsg = umf.Cast<CommandMessageBody>();
+        UMF<CommandMessageBody> castedMsg = umf.ToUMF<CommandMessageBody>();
         DoSomethingElse(castedMsg);
         // Mark message as processed
         await hydra.MarkQueueMessage(json, true);
@@ -117,12 +117,8 @@ public override async Task OnQueueMessageReceived(UMF umf, string type, string? 
 Receiving messages is handled by the `OnMessageHandler` delegate shown above. Sending messages is handled by the `SendMessage` method. The following example shows how to send a message to a specific service.
 
 ```csharp
-  UMF<PingMsg> pingMessage = new();
-  pingMessage.To = "hmr-service:/";
-  pingMessage.Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/";
-  pingMessage.Typ = "ping";
-  string json = pingMessage.Serialize();
-  await _hydra.SendMessage(pingMessage.To, json);
+  UMF<PingMsg> pingMessage = _hydra.CreateUMF("hmr-service:/", "ping", new PingMsg())
+  await _hydra.SendMessage(pingMessage);
 ```
 
 Note that we prepare a message object (more about that later) and we serialize it to JSON. Then we call the `hydra.SendMessage` member with a string containing the route to a service followed by the JSON stringified class object. In the case above that's an instance of the `PingMsg` class.
@@ -138,13 +134,26 @@ The following example shows how to use the queueing features of Hydra4Net.
 
 ```csharp
   // Create and queue message
-  UMF<QueueMsg> queueMessage = new();
-  queueMessage.To = "testrig-svcs:/";
-  queueMessage.Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/";
-  queueMessage.Typ = "job";
-  queueMessage.Bdy.JobID = "1234";
-  queueMessage.Bdy.JobType = "Sample Job";
-  queueMessage.Bdy.JobData = "Test Data";
+
+  UMF<QueueMsg> pingMessage = _hydra.CreateUMF("testrig-service:/", "job", new QueueMsg
+  {
+    JobID = "1234";
+    JobType = "Sample Job";
+    JobData = "Test Data";
+  })
+
+  //ALTERNATIVE
+  // UMF<QueueMsg> queueMessage = new();
+  // queueMessage.To = "testrig-svcs:/";
+  // queueMessage.Frm = _hydra.GetServiceFrom();
+  // queueMessage.Typ = "job";
+  // queueMessage.Bdy = new QueueMsg
+  // {
+  //   JobID = "1234";
+  //   JobType = "Sample Job";
+  //   JobData = "Test Data";
+  // }
+
   await _hydra.QueueMessage(queueMessage.Serialize());
 
   // Retrieve queued message manually (dequeue)
@@ -155,8 +164,59 @@ The following example shows how to use the queueing features of Hydra4Net.
       Console.WriteLine(qm?.Bdy.JobID);
       await _hydra.MarkQueueMessage(json, true);
   }
-
-
 ```            
+## Retreving Responses
+
+If you need to retrieve a response from another Hydra service, you can use one of the following methods:
+- `GetUMFResponse`
+- `GetUMFResponse<T>`
+- `GetUMFResponseStream`
+- `GetUMFResponseStream<T>`
+
+`GetUMFResponse` sends a message and returns a `Task` which will resolve when the first message with an `rmid` (and optionally specified `typ`) matching the sent message's `mid` is received.  If you know what body format to expect, you can use `GetUMFResponse<T>` and it will handle casting the body for you.
+
+```csharp
+///Sender
+var msg = _hydra.CreateUMF<SharedMessageBody>("queuer-svcs:/", "respond", new());
+IInboundMessage<SharedMessageBody> resp = await _hydra.GetUMFResponse<SharedMessageBody>(msg, "response");
+
+//Receiver
+IUMF<SharedMessageBody> request ; //received request from Sender
+IUMF<SharedMessageBody> response = hydra.CreateUMFResponse(request, "response", new SharedMessageBody());
+await hydra.SendMessage(sharedMessage);
+```
+
+Similarly, if you would like to receive more than one response for a given message, you can use `GetUMFResponseStream`.  This will send a message and return an `IInboundMessageStream` which will allow you to enumrate the responses (where `rmid` matches the sent message `mid`) via an `IAsyncEnumerable`.  This class will continue to listen for messages until you `Dispose()` it, so it is important to do so once you know that you no longer need to recieve messages (how you determine this is up to you).  If all messages are expected to have the same body format, then you can use the `GetUMFResponseStream<T>` method and it will handle casting the body for you.
+
+```csharp
+///Sender
+var msg = _hydra.CreateUMF<SharedMessageBody>("queuer-svcs:/", "response-stream", new());
+using (IInboundMessageStream<SharedMessageBody> resp = await _hydra.GetUMFResponseStream<SharedMessageBody>(msg))
+{
+    await foreach (var rMsg in resp.EnumerateMessagesAsync())
+    {
+        //umfs are cast for you 
+        IUMF<SharedMessageBody>? rUmf = rMsg?.ReceivedUMF;
+        if (rMsg?.Type == "response-stream") 
+        {
+            //do something
+        }
+        else if (rMsg?.Type == "response-stream-complete")
+        {
+            break;
+        }
+    }
+}
+
+//Receiver
+IUMF<SharedMessageBody> request ; //received request from Sender
+for (var i = 0; i < 5; i++)
+{
+  IUMF<SharedMessageBody> sharedMessage = hydra.CreateUMFResponse(sm!, "response-stream", new SharedMessageBody());
+  await hydra.SendMessage(sharedMessage);
+}
+IUMF<SharedMessageBody> completeMsg = hydra.CreateUMFResponse(sm!, "response-stream-complete", new SharedMessageBody());
+await hydra.SendMessage(completeMsg);
+```
 
 

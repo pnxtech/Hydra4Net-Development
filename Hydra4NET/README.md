@@ -199,4 +199,58 @@ public class Queuer : QueueProcessor
 Message processing is the same as with `SendMessage` but you're still responsible for calling `MarkQueueMessage()`. 
 Note also that QueueProcessor internally calls the `GetQueueMessage()` and calls your ProcessMessage() member. The use of QueueProcessor allows your application to focus on message processing rather than queuing boilerplate code.
 
+## Retreving Responses
+If you need to retrieve a response from another Hydra service, you can use one of the following methods:
+- `GetUMFResponse`
+- `GetUMFResponse<T>`
+- `GetUMFResponseStream`
+- `GetUMFResponseStream<T>`
+
+`GetUMFResponse` sends a message and returns a `Task` which will resolve when the first message with an `rmid` (and optionally specified `typ`) matching the sent message's `mid` is received.  If you know what body format to expect, you can use `GetUMFResponse<T>` and it will handle casting the body for you.
+
+```csharp
+///Sender
+var msg = _hydra.CreateUMF<SharedMessageBody>("queuer-svcs:/", "respond", new());
+IInboundMessage<SharedMessageBody> resp = await _hydra.GetUMFResponse<SharedMessageBody>(msg, "response");
+
+//Receiver
+IUMF<SharedMessageBody> request ; //received request from Sender
+IUMF<SharedMessageBody> response = hydra.CreateUMFResponse(request, "response", new SharedMessageBody());
+await hydra.SendMessage(sharedMessage);
+```
+
+Similarly, if you would like to receive more than one response for a given message, you can use `GetUMFResponseStream`.  This will send a message and return an `IInboundMessageStream` which will allow you to enumrate the responses (where `rmid` matches the sent message `mid`) via an `IAsyncEnumerable`.  This class will continue to listen for messages until you `Dispose()` it, so it is important to do so once you know that you no longer need to recieve messages (how you determine this is up to you).  If all messages are expected to have the same body format, then you can use the `GetUMFResponseStream<T>` method and it will handle casting the body for you.
+
+```csharp
+///Sender
+var msg = _hydra.CreateUMF<SharedMessageBody>("queuer-svcs:/", "response-stream", new());
+using (IInboundMessageStream<SharedMessageBody> resp = await _hydra.GetUMFResponseStream<SharedMessageBody>(msg))
+{
+    await foreach (var rMsg in resp.EnumerateMessagesAsync())
+    {
+        //umfs are cast for you 
+        IUMF<SharedMessageBody>? rUmf = rMsg?.ReceivedUMF;
+        if (rMsg?.Type == "response-stream") 
+        {
+            //do something
+        }
+        else if (rMsg?.Type == "response-stream-complete")
+        {
+            break;
+        }
+    }
+}
+
+//Receiver
+IUMF<SharedMessageBody> request ; //received request from Sender
+for (var i = 0; i < 5; i++)
+{
+  IUMF<SharedMessageBody> sharedMessage = hydra.CreateUMFResponse(sm!, "response-stream", new SharedMessageBody());
+  await hydra.SendMessage(sharedMessage);
+}
+IUMF<SharedMessageBody> completeMsg = hydra.CreateUMFResponse(sm!, "response-stream-complete", new SharedMessageBody());
+await hydra.SendMessage(completeMsg);
+```
+
+
 

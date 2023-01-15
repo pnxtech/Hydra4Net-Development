@@ -8,7 +8,10 @@ namespace Hydra4Net.HostingExtensions
     {
         public abstract Task OnMessageReceived(IInboundMessage msg, IHydra hydra);
 
-        public abstract Task OnQueueMessageReceived(IInboundMessage msg, IHydra hydra);
+        public virtual Task OnQueueMessageReceived(IInboundMessage msg, IHydra hydra)
+        {
+            return Task.CompletedTask;
+        }
 
         public virtual Task BeforeInit(IHydra hydra)
         {

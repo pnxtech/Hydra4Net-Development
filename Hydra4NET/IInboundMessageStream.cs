@@ -12,6 +12,7 @@ namespace Hydra4NET
         /// <param name="ct"></param>
         /// <returns></returns>
         IAsyncEnumerable<IInboundMessage> EnumerateMessagesAsync(CancellationToken ct = default);
+        
     }
 
     public interface IInboundMessageStream<TResBdy> : IInboundMessageStream

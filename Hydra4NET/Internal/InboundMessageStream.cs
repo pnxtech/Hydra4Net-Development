@@ -21,7 +21,11 @@ namespace Hydra4NET.Internal
 
         protected Channel<IInboundMessage> _channel;
 
-        bool _isComplete = false;
+        private const int _IncompleteValue = 0;
+
+        private int _isComplete = _IncompleteValue;
+
+        public bool IsComplete => _isComplete != _IncompleteValue;
 
         public IAsyncEnumerable<IInboundMessage> EnumerateMessagesAsync(CancellationToken ct = default)
         {
@@ -30,13 +34,16 @@ namespace Hydra4NET.Internal
 
         void MarkComplete()
         {
-            _isComplete = true;
+            if (IsComplete)
+                return;
+            //extra thread safety
+            Interlocked.Increment(ref _isComplete);
             _channel.Writer.TryComplete();
         }
 
         public async ValueTask AddMessage(IInboundMessage msg)
         {
-            if(!_isComplete)
+            if(!IsComplete)
                 await _channel.Writer.WriteAsync(msg);
         }
 

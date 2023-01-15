@@ -29,5 +29,6 @@ namespace Hydra4NET
 
         public string GetServiceFrom() => $"{InstanceID}@{ServiceName}:/";
 
+        public IReceivedUMF? DeserializeReceviedUMF(string json) => ReceivedUMF.Deserialize(json);
     }
 }

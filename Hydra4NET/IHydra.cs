@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Hydra4NET.Helpers;
+using StackExchange.Redis;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -50,7 +52,7 @@ namespace Hydra4NET
         /// </summary>
         /// <param name="config"></param>
         /// <returns></returns>
-        /// <exception cref="HydraInitException"></exception>
+        /// <exception cref="HydraException"></exception>
         Task Init(HydraConfigObject? config = null);
 
         /// <summary>
@@ -182,6 +184,15 @@ namespace Hydra4NET
         public Task<IInboundMessageStream<TResBdy>> GetUMFResponseStream<TResBdy>(IUMF umf, bool broadcast = false) where TResBdy : new();
 
         /// <summary>
+        /// Deserializes a json string into an IReceivedUMF
+        /// </summary>
+        /// <param name="json"></param>
+        /// <returns></returns>
+        public IReceivedUMF? DeserializeReceviedUMF(string json);
+
+        #region Cache
+
+        /// <summary>
         /// Caches a string with redis
         /// </summary>
         /// <param name="key"></param>
@@ -189,7 +200,7 @@ namespace Hydra4NET
         /// <param name="expiry"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        Task<bool> SetCacheString(string key, string value, TimeSpan? expiry = null, CancellationToken token = default);
+        Task<bool> SetCacheString(string key, string value, TimeSpan? expiry = null);
 
         /// <summary>
         /// Retrieves a cached string from redis
@@ -197,7 +208,7 @@ namespace Hydra4NET
         /// <param name="key"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        Task<string?> GetCacheString(string key, CancellationToken token = default);
+        Task<string?> GetCacheString(string key);
 
         /// <summary>
         /// Caches a byte array with redis
@@ -207,7 +218,7 @@ namespace Hydra4NET
         /// <param name="expiry"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        Task<bool> SetCacheBytes(string key, byte[] value, TimeSpan? expiry = null, CancellationToken token = default);
+        Task<bool> SetCacheBytes(string key, byte[] value, TimeSpan? expiry = null);
 
         /// <summary>
         /// Retrieves a cached byte array from redis
@@ -215,7 +226,41 @@ namespace Hydra4NET
         /// <param name="key"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        Task<byte[]?> GetCacheBytes(string key, CancellationToken token = default);
+        Task<byte[]?> GetCacheBytes(string key);
+
+        /// <summary>
+        /// Caches a bool with redis
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="expiry"></param>
+        /// <returns></returns>
+        Task<bool> SetCacheBool(string key, bool value, TimeSpan? expiry = null);
+
+        /// <summary>
+        /// Retrieves a cached bool from redis
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        Task<bool?> GetCacheBool(string key);
+
+        /// <summary>
+        /// Serializes to JSON and caches an object with redis.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="expiry"></param>
+        /// <returns></returns>
+        Task<bool> SetCacheJson<T>(string key, T value, TimeSpan? expiry = null) where T : class;
+
+        /// <summary>
+        /// Retrieves a cached JSON string from redis and deserializes it
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        Task<T?> GetCacheJson<T>(string key) where T : class;
 
         /// <summary>
         /// Clears a cached item
@@ -223,11 +268,14 @@ namespace Hydra4NET
         /// <param name="key"></param>
         /// <param name="token"></param>
         /// <returns></returns>
-        Task<bool> RemoveCacheItem(string key, CancellationToken token = default);
+        Task<bool> RemoveCacheItem(string key);
+
+        #endregion
 
         /// <summary>
         /// Called by Dispose(). Cleans up resources associated with this instance.
         /// </summary>
         void Shutdown();
+
     }
 }

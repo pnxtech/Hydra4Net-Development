@@ -6,13 +6,15 @@ namespace Hydra4NET.Internal
 {
     internal class ResponseHandler
     {
-        //this dict is used for preventing multiple registrations per 
+        //Used for preventing multiple registrations per mid
+        private ConcurrentDictionary<string, object> _waitingMids
+            = new ConcurrentDictionary<string, object>();
+
+        //tracks single responses
         private ConcurrentDictionary<(string mid, string type), TaskCompletionSource<IInboundMessage>> _waitingRepsonses
            = new ConcurrentDictionary<(string, string), TaskCompletionSource<IInboundMessage>>();
 
-        private ConcurrentDictionary<string, object> _waitingMids
-           = new ConcurrentDictionary<string, object>();
-
+        //track stream responses
         private ConcurrentDictionary<string, InboundMessageStream> _waitingStreamResponses
            = new ConcurrentDictionary<string, InboundMessageStream>();
 
@@ -22,7 +24,7 @@ namespace Hydra4NET.Internal
         (string mid, string type) GetKey(string mid, string? type) => (mid, type ?? GetNullType(mid));
 
         /// <summary>
-        /// Ensures that 2 registrations of the same mid will not be allowed, throws if alreadyregistered
+        /// Ensures that more than one registration of the same mid will not be allowed, throws if already registered
         /// </summary>
         /// <param name="mid"></param>
         /// <exception cref="Exception"></exception>
@@ -41,28 +43,29 @@ namespace Hydra4NET.Internal
 
         public async ValueTask TryResolveResponses(IInboundMessage msg)
         {
+            if (_waitingMids.IsEmpty || string.IsNullOrEmpty(msg.ReceivedUMF?.Rmid))
+                return;
             if (!TryResolveResponse(msg))
                 await TryResolveStreamResponse(msg);
         }
 
-        //if a large number of incorrectly-typed responses come back before resolution, that is the only way perf could be dgraded,
+        //if a large number of incorrectly-typed responses come back before resolution, that is the only way perf could be degraded,
         //although it would only be for those responses and if they came back in quick succession
         //maybe we should only be looking at the first response and throwing if it is not the expected type? this would remove the need for locking
         bool TryResolveResponse(IInboundMessage msg)
         {
-            if (_waitingMids.IsEmpty || string.IsNullOrEmpty(msg.ReceivedUMF?.Rmid))
+            if (_waitingRepsonses.IsEmpty || string.IsNullOrEmpty(msg.ReceivedUMF?.Rmid))
                 return false;
             //check still blocked
             if (_waitingMids.TryGetValue(msg.ReceivedUMF.Rmid, out var midLock))
             {
-                //make this check atomic. shouldnt have a perf impact since only responses with given rmid before resolution will make it this far
-                //Threads to reach this point are responses to message before conditions are met
+                //make this check atomic. Threads to reach this point are responses to message before type condition is met
                 lock (midLock)
                 {
                     var umf = msg.ReceivedUMF;
                     //check whether a typed or untyped response has been registered
-                    if (_waitingRepsonses.TryGetValue(GetKey(umf.Rmid, null), out var tcs)
-                        || _waitingRepsonses.TryGetValue(GetKey(umf.Rmid, msg.Type), out tcs))
+                    if (_waitingRepsonses.TryRemove(GetKey(umf.Rmid, null), out var tcs)
+                        || _waitingRepsonses.TryRemove(GetKey(umf.Rmid, msg.Type), out tcs))
                     {
                         tcs.SetResult(msg);
                         _waitingMids.TryRemove(msg.ReceivedUMF.Rmid, out _);

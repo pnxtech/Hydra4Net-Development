@@ -105,11 +105,11 @@ namespace Hydra4NET
         public async Task Init(HydraConfigObject? config = null)
         {
             if (Initialized)
-                throw new HydraInitException("This instance has already been initialized");
+                throw new HydraException("This instance has already been initialized", HydraException.ErrorType.Initialization);
             if (config != null)
                 LoadConfig(config);
             if (_config is null)
-                throw new HydraInitException("No HydraConfigObject has been provided");
+                throw new HydraException("No HydraConfigObject has been provided", HydraException.ErrorType.Initialization);
             try
             {
                 //probably throw if no config passed or invalid?
@@ -160,16 +160,16 @@ namespace Hydra4NET
                 }
                 else
                 {
-                    throw new HydraInitException("Failed to initialize Hydra, connection to redis failed");
+                    throw new HydraException("Failed to initialize Hydra, connection to redis failed", HydraException.ErrorType.Initialization);
                 }
             }
-            catch (HydraInitException)
+            catch (HydraException)
             {
                 throw;
             }
             catch (Exception e)
             {
-                throw new HydraInitException("Failed to initialize Hydra", e);
+                throw new HydraException("Failed to initialize Hydra", e, HydraException.ErrorType.Initialization);
             }
 
         }
@@ -230,9 +230,9 @@ namespace Hydra4NET
 
         private async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
         {
-            if (!string.IsNullOrEmpty(entry?.Error) && _redis != null)
+            if (string.IsNullOrEmpty(entry?.Error) && _redis != null)
             {
-                await _redis.GetDatabase().ListLeftPushAsync($"{_redis_pre_key}:{entry.ServiceName}:mqrecieved", jsonUMFMessage);
+                await _redis.GetDatabase().ListLeftPushAsync($"{_redis_pre_key}:{entry!.ServiceName}:mqrecieved", jsonUMFMessage);
             }
         }
 
@@ -241,7 +241,7 @@ namespace Hydra4NET
 
         public Task QueueMessage(string jsonUMFMessage)
         {
-            ReceivedUMF? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+            IReceivedUMF? umfHeader = DeserializeReceviedUMF(jsonUMFMessage);
             return QueueMessage(umfHeader?.GetRouteEntry(), jsonUMFMessage);
         }
 
@@ -264,7 +264,7 @@ namespace Hydra4NET
 
         public async Task<string> MarkQueueMessage(string jsonUMFMessage, bool completed)
         {
-            ReceivedUMF? umfHeader = ExtractUMFHeader(jsonUMFMessage);
+            IReceivedUMF? umfHeader = DeserializeReceviedUMF(jsonUMFMessage);
             if (umfHeader != null && _redis != null)
             {
                 UMFRouteEntry entry = umfHeader.GetRouteEntry();
@@ -314,8 +314,6 @@ namespace Hydra4NET
         * ***********************************
         */
 
-        static ReceivedUMF? ExtractUMFHeader(string jsonUMFString) => ReceivedUMF.Deserialize(jsonUMFString);
-
         async Task HandleMessage(ChannelMessage channelMessage)
         {
             string msg = (string?)channelMessage.Message ?? String.Empty;
@@ -358,62 +356,6 @@ namespace Hydra4NET
                 _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(HandleMessage);
             }
         }
-
-        public async Task<IInboundMessage> GetUMFResponse(IUMF umf, string? expectedType = null
-            , TimeSpan? timeout = null, CancellationToken ct = default)
-        {
-            if (umf is null)
-                throw new ArgumentNullException(nameof(umf));
-            timeout ??= TimeSpan.FromSeconds(30);
-            var tcs = new TaskCompletionSource<IInboundMessage>();
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            //prevent this task from waiting forever.
-            cts.CancelAfter(timeout ?? TimeSpan.FromSeconds(30));
-            _responseHandler.RegisterResponse(umf.Mid, expectedType, tcs);
-            try
-            {
-                await SendMessage(umf);
-                return await tcs.Task;
-            }
-            finally
-            {
-                _responseHandler.ClearResponse(umf.Mid, expectedType);
-            }
-        }
-        public async Task<IInboundMessage<TResBdy>> GetUMFResponse<TResBdy>(IUMF umf, string expectedType, TimeSpan? timeout = null, CancellationToken ct = default) 
-            where TResBdy : new()
-        {
-            if (umf is null)
-                throw new ArgumentNullException(nameof(umf));
-            var res = await GetUMFResponse(umf, expectedType, timeout, ct);
-            return new InboundMessage<TResBdy>
-            {
-                ReceivedUMF = res.ReceivedUMF?.ToUMF<TResBdy>(),
-                MessageJson = res.MessageJson,
-                Type = res.Type
-            };
-        }
-
-        public async Task<IInboundMessageStream> GetUMFResponseStream(IUMF umf, bool broadCast = false)
-        {
-            if (umf is null)
-                throw new ArgumentNullException(nameof(umf));
-            var stream = _responseHandler.RegisterResponseStream(umf.Mid);
-            await (broadCast ? SendBroadcastMessage(umf) : SendMessage(umf));
-            return stream;
-        }
-
-        public async Task<IInboundMessageStream<TResBdy>> GetUMFResponseStream<TResBdy>(IUMF umf, bool broadCast = false) 
-            where TResBdy : new()
-        {
-            if (umf is null)
-                throw new ArgumentNullException(nameof(umf));
-            var stream = _responseHandler.RegisterResponseStream<TResBdy>(umf.Mid);
-            await (broadCast ? SendBroadcastMessage(umf) : SendMessage(umf));
-            return stream;
-        }
-
-      
     }
 }
 
