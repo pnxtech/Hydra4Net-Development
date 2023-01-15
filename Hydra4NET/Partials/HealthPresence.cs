@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Hydra4NET.Helpers;
 
 /**
  * Hydra Health and Presence module
@@ -153,9 +154,10 @@ namespace Hydra4NET
         {
             List<string> instanceIds = new List<string>();
             List<PresenceNodeEntry> serviceEntries = new List<PresenceNodeEntry>();
-            if (_server != null && _redis != null)
+            var server = GetServer();
+            if (server != null && _redis != null)
             {
-                foreach (var key in _server.Keys(pattern: $"*:{serviceName}:*:presence"))
+                foreach (var key in server.Keys(pattern: $"*:{serviceName}:*:presence"))
                 {
                     string segments = key.ToString();
                     var segmentParts = segments.Split(":");

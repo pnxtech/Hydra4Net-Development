@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Hydra4NET.Helpers;
 
 /**
  * UMF - Universal Message Format
@@ -101,7 +102,7 @@ namespace Hydra4NET
             set { _Timestamp = value; }
         }
 
-        public virtual object Bdy { get; set; }
+        public virtual object? Bdy { get; set; }
 
         /// <summary>
         ///Parses a string based UMF route into individual route entries.
@@ -222,7 +223,7 @@ namespace Hydra4NET
         /// The original message's JSON value
         /// </summary>
         [JsonIgnore] //prevent System.Text.Json from serializing / deserializing
-        public string MessageJson { get; private set; }
+        public string MessageJson { get; private set; } = "";
 
         /// <summary>
         /// Deserializes a UMF JSON message into an untyped UMF class instance

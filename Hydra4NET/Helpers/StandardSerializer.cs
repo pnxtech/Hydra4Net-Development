@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace Hydra4NET
+namespace Hydra4NET.Helpers
 {
     public class StandardSerializer
     {

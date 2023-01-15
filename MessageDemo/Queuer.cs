@@ -15,7 +15,7 @@ public class Queuer : QueueProcessor
     protected override async Task ProcessMessage(IInboundMessage msg)
     {
         Console.WriteLine("Queuer: retrieved message from queue");
-        if (msg.Type == "queuer")
+        if (msg.Type == "queuer" && !string.IsNullOrEmpty(msg.MessageJson) )
         {
             Console.WriteLine($"Queuer: processing queued message from sender");
             IUMF<SharedMessageBody>? sm = msg.ReceivedUMF?.ToUMF<SharedMessageBody>();

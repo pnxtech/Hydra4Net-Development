@@ -7,18 +7,6 @@ using System.Text.Json;
  */
 namespace Hydra4NET
 {
-    static public class Configuration
-    {
-        static public HydraConfigObject? Load(string configPath)
-        {
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-            string json = File.ReadAllText(configPath);
-            return (JsonSerializer.Deserialize<HydraConfigObject>(json, options));
-        }
-    }
 
     public class HydraConfigObject
     {
@@ -32,6 +20,21 @@ namespace Hydra4NET
                 connectionString = $"{connectionString},{redis?.Options}";
             }
             return connectionString;
+        }
+
+        /// <summary>
+        /// Loads hydra config from the pecified JSON file
+        /// </summary>
+        /// <param name="configPath"></param>
+        /// <returns></returns>
+        static public HydraConfigObject? Load(string configJsonPath)
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            string json = File.ReadAllText(configJsonPath);
+            return (JsonSerializer.Deserialize<HydraConfigObject>(json, options));
         }
 
     }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -17,21 +18,25 @@ namespace Hydra4NET.Internal
         }
 
         public string Mid { get; set; }
-        private Channel<IInboundMessage> _channel;
+        protected Channel<IInboundMessage> _channel;
+
+        bool _isComplete = false;
 
         public IAsyncEnumerable<IInboundMessage> EnumerateMessagesAsync(CancellationToken ct = default)
         {
             return _channel.Reader.ReadAllAsync(ct);
         }
 
-        public void MarkComplete()
+        void MarkComplete()
         {
+            _isComplete = true;
             _channel.Writer.TryComplete();
         }
 
         public async ValueTask AddMessage(IInboundMessage msg)
         {
-            await _channel.Writer.WriteAsync(msg);
+            if(!_isComplete)
+                await _channel.Writer.WriteAsync(msg);
         }
 
         public void Dispose()
@@ -42,5 +47,23 @@ namespace Hydra4NET.Internal
 
         public Action OnDispose { get; set; } = () => { };
 
+    }
+
+    internal class InboundMessageStream<TResBdy> : InboundMessageStream, IInboundMessageStream<TResBdy> where TResBdy: new()
+    {
+        public InboundMessageStream(string mid, int? maxBuffer = null) : base(mid, maxBuffer) { }
+
+        public new async IAsyncEnumerable<IInboundMessage<TResBdy>> EnumerateMessagesAsync([EnumeratorCancellation] CancellationToken ct = default)
+        {
+            await foreach(IInboundMessage msg in _channel.Reader.ReadAllAsync(ct))
+            {
+                yield return new InboundMessage<TResBdy>
+                {
+                    ReceivedUMF = msg.ReceivedUMF?.ToUMF<TResBdy>(),
+                    MessageJson = msg.MessageJson,
+                    Type = msg.Type
+                };                 
+            }
+        }
     }
 }

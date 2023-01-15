@@ -1,11 +1,11 @@
 ﻿namespace Hydra4NET
 {
-    public interface IUMF<TBdy>
+    public interface IUMF
     {
         /// <summary>
         /// The customizable body of the message
         /// </summary>
-        TBdy Bdy { get; set; }
+        object? Bdy { get; set; }
 
         /// <summary>
         /// The service name and instance of the message
@@ -49,5 +49,13 @@
         string Serialize();
 
         UMFRouteEntry GetRouteEntry();
+    }
+
+    public interface IUMF<TBdy>  : IUMF
+    {
+        /// <summary>
+        /// The customizable typed body of the message
+        /// </summary>
+        new TBdy Bdy { get; set; }
     }
 }

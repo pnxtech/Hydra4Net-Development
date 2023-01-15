@@ -1,6 +1,6 @@
 ﻿# Set-Location $PsScriptRoot
 $img = docker image inspect hostingdemo:latest | convertfrom-json
-if($args.Contains("--build")  || $img.Length -eq 0){
+if($args.Contains("--build") -or $img.Length -eq 0){
   docker build --force-rm -t hostingdemo -f ../Dockerfile "$PsScriptRoot/../.."
 }
 

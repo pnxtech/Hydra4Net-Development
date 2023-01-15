@@ -1,9 +1,21 @@
 ﻿using Hydra4NET;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using TestRig;
 
-// Create an instance of Hydra4Net
-Hydra hydra = new();
+
+// Load the hydra config.json file
+//
+HydraConfigObject? config = HydraConfigObject.Load("config.json");
+if (config == null)
+{
+    Console.WriteLine("Hydra config.json not found");
+    Environment.Exit(1);
+}
+
+
+// Create an instance of Hydra4Net using the loaded config file
+Hydra hydra = new(config);
 
 // Create an instance of a Test class for testing
 // hydra functions during development
@@ -18,18 +30,9 @@ void AppDomain_ProcessExit(object? sender, EventArgs e)
     hydra.Shutdown();
 }
 
-// Load the hydra config.json file
-//
-HydraConfigObject? config = Configuration.Load("config.json");
-if (config == null)
-{
-    Console.WriteLine("Hydra config.json not found");
-    Environment.Exit(1);
-}
-
 // Setup an OnMessageHandler to recieve incoming UMF messages
 //
-hydra.OnMessageHandler(async (IInboundMessage? msg) =>
+hydra.OnMessageHandler(async (IInboundMessage msg) =>
 {
     Console.WriteLine($"{msg.Type}: {msg.MessageJson}");
     if (msg.Type == "testMsg")
@@ -46,8 +49,8 @@ hydra.OnMessageHandler(async (IInboundMessage? msg) =>
     await Task.Delay(1);
 });
 
-// Initialize Hydra using the loaded config file
-await hydra.Init(config);
+// Initialize Hydra 
+await hydra.Init();
 
 // Tests
 //hydraTests.CreateUMFMessage();

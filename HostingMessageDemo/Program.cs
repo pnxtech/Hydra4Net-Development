@@ -1,6 +1,4 @@
-﻿
-
-using HostingDemo;
+﻿using HostingDemo;
 using Hydra4Net.HostingExtensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,7 +18,7 @@ var host = Host.CreateDefaultBuilder(args)
             .AddHydra(config)
             //could also implement IHydraEventsHandler interface without base class
             .AddHydraEventHandler<SampleMessageHandler>();
-        services.AddSingleton<Sender>();
+        services.AddSingleton<Sender>();   
     }).Build();
 
 await host.RunAsync();

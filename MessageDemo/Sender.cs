@@ -1,4 +1,5 @@
 ﻿using Hydra4NET;
+using Hydra4NET.Helpers;
 using MessageDemo.Models;
 
 namespace MessageDemo;

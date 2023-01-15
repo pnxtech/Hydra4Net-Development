@@ -106,5 +106,15 @@ namespace Hydra4NET.Internal
             resp.OnDispose = () => ClearStreamResponse(mid);
             return resp;
         }
+        public InboundMessageStream<TResBdy> RegisterResponseStream<TResBdy>(string mid) where TResBdy: new()
+        {
+            ConfirmMessageNotResgistered(mid);
+            InboundMessageStream<TResBdy> resp = new InboundMessageStream<TResBdy>(mid);
+            //what if add fails??
+            _waitingMids.TryAdd(mid, new object());
+            _waitingStreamResponses.TryAdd(mid, resp);
+            resp.OnDispose = () => ClearStreamResponse(mid);
+            return resp;
+        }
     }
 }

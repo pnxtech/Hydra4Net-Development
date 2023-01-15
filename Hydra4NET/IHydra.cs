@@ -78,10 +78,9 @@ namespace Hydra4NET
         /// <summary>
         /// Serializes and adds a message to a services queue
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <param name="umfHeader"></param>
         /// <returns></returns>
-        Task QueueMessage<T>(IUMF<T> message) where T : new();
+        Task QueueMessage(IUMF message);
 
         /// <summary>
         /// Sends a message to all instances of a service
@@ -94,10 +93,9 @@ namespace Hydra4NET
         /// <summary>
         /// Serializes and sends a message to all instances of a service
         /// </summary>
-        /// <param name="to"></param>
-        /// <param name="jsonUMFMessage"></param>
+        /// <param name="message"></param>
         /// <returns></returns>
-        Task SendBroadcastMessage<T>(IUMF<T> message) where T : new();
+        Task SendBroadcastMessage(IUMF message);
 
         /// <summary>
         /// Sends a message to a service instance
@@ -113,7 +111,7 @@ namespace Hydra4NET
         /// <typeparam name="T"></typeparam>
         /// <param name="message"></param>
         /// <returns></returns>
-        Task SendMessage<T>(IUMF<T> message) where T : new();
+        Task SendMessage(IUMF message);
 
         /// <summary>
         /// Gets a UMF instance with default values set for sending
@@ -126,8 +124,16 @@ namespace Hydra4NET
         /// <returns></returns>
         IUMF<TBdy> CreateUMF<TBdy>(string to, string type, TBdy bdy, string? rmid = null) where TBdy : new();
 
-        //implement me, respond to a given umf
-        //IUMF<TBdy> CreateResponseUMF<TBdy>(IUMF<> test TBdy bdy) where TBdy : new();
+        /// <summary>
+        /// Creates a UMF instance with default values set for sending a response to another UMF
+        /// </summary>
+        /// <typeparam name="TFromBdy"></typeparam>
+        /// <typeparam name="TToBdy"></typeparam>
+        /// <param name="umf"></param>
+        /// <param name="type"></param>
+        /// <param name="bdy"></param>
+        /// <returns></returns>
+        IUMF<TToBdy> CreateUMFResponse<TToBdy>(IUMF umf, string type, TToBdy bdy) where TToBdy : new();
 
         /// <summary>
         /// Gets the from route for this Hydra service
@@ -136,24 +142,88 @@ namespace Hydra4NET
         string GetServiceFrom();
 
         /// <summary>
-        /// Sends a message and gets a response from the first message to respond (via Rmid).  The default timeout is 30 seconds.
+        /// Sends a message and gets a response from the first message to respond (via Rmid) with the optional exected type.  The default timeout is 30 seconds.
         /// </summary>
-        /// <typeparam name="TRespBdy"></typeparam>
-        /// <typeparam name="TMsgBdy"></typeparam>
         /// <param name="msg"></param>
+        /// <param name="expectedType"></param>
         /// <param name="timeout"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        public Task<IInboundMessage> GetUMFResponse<TMsgBdy>(IUMF<TMsgBdy> msg, string? expectedType = null
-            , TimeSpan? timeout = null, CancellationToken ct = default) where TMsgBdy : new();
+        public Task<IInboundMessage> GetUMFResponse(IUMF msg, string? expectedType = null
+            , TimeSpan? timeout = null, CancellationToken ct = default);
 
         /// <summary>
-        /// Gets a stream of UMF responses.  The stream should be disposed when reading is complete. 
+        /// Sends a message and gets a typed response from the first message to respond (via Rmid) with the optional exected type.  The default timeout is 30 seconds.
         /// </summary>
-        /// <typeparam name="TMsgBdy"></typeparam>
+        /// <typeparam name="TResBdy"></typeparam>
         /// <param name="umf"></param>
+        /// <param name="expectedType"></param>
+        /// <param name="timeout"></param>
+        /// <param name="ct"></param>
         /// <returns></returns>
-        public Task<IInboundMessageStream> GetUMFResponseStream<TMsgBdy>(IUMF<TMsgBdy> umf) where TMsgBdy : new();
+        public Task<IInboundMessage<TResBdy>> GetUMFResponse<TResBdy>(IUMF umf, string expectedType
+            , TimeSpan? timeout = null, CancellationToken ct = default)
+            where TResBdy : new();
+
+        /// <summary>
+        /// Gets a stream of UMF responses (via Rmid). The stream should be disposed when reading is complete. 
+        /// </summary>
+        /// <param name="umf"></param>
+        /// <param name="broadcast"></param>
+        /// <returns></returns>
+        public Task<IInboundMessageStream> GetUMFResponseStream(IUMF umf, bool broadcast = false);
+
+        /// <summary>
+        /// Gets a stream of typed UMF responses (via Rmid). The stream should be disposed when reading is complete. 
+        /// </summary>
+        /// <param name="umf"></param>
+        /// <param name="broadcast"></param>
+        /// <returns></returns>
+        public Task<IInboundMessageStream<TResBdy>> GetUMFResponseStream<TResBdy>(IUMF umf, bool broadcast = false) where TResBdy : new();
+
+        /// <summary>
+        /// Caches a string with redis
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="expiry"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        Task<bool> SetCacheString(string key, string value, TimeSpan? expiry = null, CancellationToken token = default);
+
+        /// <summary>
+        /// Retrieves a cached string from redis
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        Task<string?> GetCacheString(string key, CancellationToken token = default);
+
+        /// <summary>
+        /// Caches a byte array with redis
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <param name="expiry"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        Task<bool> SetCacheBytes(string key, byte[] value, TimeSpan? expiry = null, CancellationToken token = default);
+
+        /// <summary>
+        /// Retrieves a cached byte array from redis
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        Task<byte[]?> GetCacheBytes(string key, CancellationToken token = default);
+
+        /// <summary>
+        /// Clears a cached item
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        Task<bool> RemoveCacheItem(string key, CancellationToken token = default);
 
         /// <summary>
         /// Called by Dispose(). Cleans up resources associated with this instance.

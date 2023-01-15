@@ -78,7 +78,9 @@ public class Sender
         _logger.LogDebug($"Sending message for queuer: {sharedMessage.Serialize()}");
         await _hydra.QueueMessage(sharedMessage);
     }
-    Random _rand = new Random();
+
+    static readonly Random _rand = new Random();
+
     private async Task SendResponseMessage()
     {
         try
@@ -88,8 +90,8 @@ public class Sender
                 Id = _rand.Next(),
                 Msg = "Requesting response..."
             });
-            IInboundMessage resp = await _hydra.GetUMFResponse(msg, "response");
-            IUMF<SharedMessageBody>? umf = resp?.ReceivedUMF?.ToUMF<SharedMessageBody>();
+            IInboundMessage<SharedMessageBody> resp = await _hydra.GetUMFResponse<SharedMessageBody>(msg, "response");
+            IUMF<SharedMessageBody>? umf = resp?.ReceivedUMF;
             _logger.LogInformation($"Single response received: {umf?.Bdy?.Msg}");
         }
         catch (Exception e)
@@ -104,11 +106,12 @@ public class Sender
             Id = _rand.Next(),
             Msg = "Requesting response..."
         });
-        using (IInboundMessageStream resp = await _hydra.GetUMFResponseStream(msg))
+        using (IInboundMessageStream<SharedMessageBody> resp = await _hydra.GetUMFResponseStream<SharedMessageBody>(msg))
         {
             await foreach (var rMsg in resp.EnumerateMessagesAsync())
             {
-                var rUmf = rMsg.ReceivedUMF?.ToUMF<SharedMessageBody>();
+                //umfs are cast for you 
+                IUMF<SharedMessageBody>? rUmf = rMsg?.ReceivedUMF;
                 if (rMsg?.Type == "response-stream")
                     _logger.LogInformation($"Response stream message received: {rUmf?.Bdy?.Msg}");
                 else if (rMsg?.Type == "response-stream-complete")
