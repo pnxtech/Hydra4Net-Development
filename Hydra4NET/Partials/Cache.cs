@@ -37,7 +37,6 @@ namespace Hydra4NET
 
         public Task<bool> RemoveCacheItem(string key, CancellationToken token = default) => _redis?.GetDatabase()?.KeyDeleteAsync(GetKey(key)) ?? Task.FromResult(false);
 
-
         //TODO: Add shared cache for all hydra services.  possibly make this caching component its own class (expose via Hydra.Cache?)
     }
 }

@@ -18,6 +18,7 @@ namespace Hydra4NET.Internal
         }
 
         public string Mid { get; set; }
+
         protected Channel<IInboundMessage> _channel;
 
         bool _isComplete = false;

@@ -72,6 +72,7 @@ namespace Hydra4NET.Internal
             }
             return false;
         }
+
         async ValueTask<bool> TryResolveStreamResponse(IInboundMessage msg)
         {
             if (_waitingStreamResponses.IsEmpty || string.IsNullOrEmpty(msg.ReceivedUMF?.Rmid))
@@ -106,6 +107,7 @@ namespace Hydra4NET.Internal
             resp.OnDispose = () => ClearStreamResponse(mid);
             return resp;
         }
+
         public InboundMessageStream<TResBdy> RegisterResponseStream<TResBdy>(string mid) where TResBdy: new()
         {
             ConfirmMessageNotResgistered(mid);
