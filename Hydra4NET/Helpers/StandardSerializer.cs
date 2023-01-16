@@ -24,7 +24,7 @@ namespace Hydra4NET.Helpers
         {
             return JsonSerializer.Serialize(item, new JsonSerializerOptions()
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             });
         }
 

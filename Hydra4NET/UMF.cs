@@ -30,7 +30,7 @@ namespace Hydra4NET
             _Mid = Guid.NewGuid().ToString();
             _Type = String.Empty;
             _Version = _UMF_Version;
-            _Timestamp = DateTime.Now;
+            _Timestamp = DateTime.UtcNow;
         }
 
         public string To
@@ -68,7 +68,11 @@ namespace Hydra4NET
         public DateTime Ts
         {
             get { return _Timestamp; }
-            set { _Timestamp = value; }
+            set
+            {
+                //ensure serialization works as expected
+                _Timestamp = value.ToUniversalTime();
+            }
         }
 
         public virtual object? Bdy { get; set; }
