@@ -34,7 +34,7 @@ public class App
       
 
         // Initialize Hydra 
-        await hydra.Init();
+        await hydra.InitAsync();
 
         // Determine whether this instance of MessageDemo
         // should play the role of a sender or a queuer

@@ -50,7 +50,7 @@ hydra.OnMessageHandler(async (IInboundMessage msg) =>
 });
 
 // Initialize Hydra 
-await hydra.Init();
+await hydra.InitAsync();
 
 // Tests
 //hydraTests.CreateUMFMessage();

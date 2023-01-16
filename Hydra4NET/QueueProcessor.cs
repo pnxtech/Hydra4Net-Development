@@ -47,7 +47,7 @@ namespace Hydra4NET
             {
                 try
                 {
-                    string message = await _hydra.GetQueueMessage();
+                    string message = await _hydra.GetQueueMessageAsync();
                     if (message != string.Empty)
                     {
                         IReceivedUMF? umf = _hydra.DeserializeReceviedUMF(message);

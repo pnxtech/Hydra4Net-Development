@@ -1,6 +1,4 @@
-﻿using Hydra4NET.Helpers;
-using StackExchange.Redis;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,20 +30,20 @@ namespace Hydra4NET
         /// </summary>
         /// <param name="serviceName"></param>
         /// <returns></returns>
-        Task<List<Hydra.PresenceNodeEntry>> GetPresence(string serviceName);
+        Task<List<Hydra.PresenceNodeEntry>> GetPresenceAsync(string serviceName);
 
         /// <summary>
         /// Retrieves a message from a service's queue
         /// </summary>
         /// <param name="serviceName"></param>
         /// <returns></returns>
-        Task<string> GetQueueMessage(string serviceName);
+        Task<string> GetQueueMessageAsync(string serviceName);
         /// <summary>
         /// 
         /// Retrieves a message from this Hydra instance service's queue
         /// </summary>
         /// <returns></returns>
-        Task<string> GetQueueMessage();
+        Task<string> GetQueueMessageAsync();
 
         /// <summary>
         /// Initializes Hydra, accepting an optional config option which will override the one at initialization
@@ -53,7 +51,7 @@ namespace Hydra4NET
         /// <param name="config"></param>
         /// <returns></returns>
         /// <exception cref="HydraException"></exception>
-        Task Init(HydraConfigObject? config = null);
+        Task InitAsync(HydraConfigObject? config = null);
 
         /// <summary>
         /// Message is popped off the "in progress" queue and if the completed flag is set to false then the message is requeued on the the "mqrecieved" queue.
@@ -62,7 +60,7 @@ namespace Hydra4NET
         /// <param name="jsonUMFMessage"></param>
         /// <param name="completed"></param>
         /// <returns></returns>
-        Task<string> MarkQueueMessage(string jsonUMFMessage, bool completed);
+        Task<string> MarkQueueMessageAsync(string jsonUMFMessage, bool completed);
 
         /// <summary>
         /// Registers the event handler for when a message is received
@@ -75,14 +73,14 @@ namespace Hydra4NET
         /// </summary>
         /// <param name="jsonUMFMessage"></param>
         /// <returns></returns>
-        Task QueueMessage(string jsonUMFMessage);
+        Task QueueMessageAsync(string jsonUMFMessage);
 
         /// <summary>
         /// Serializes and adds a message to a services queue
         /// </summary>
         /// <param name="umfHeader"></param>
         /// <returns></returns>
-        Task QueueMessage(IUMF message);
+        Task QueueMessageAsync(IUMF message);
 
         /// <summary>
         /// Sends a message to all instances of a service
@@ -90,14 +88,14 @@ namespace Hydra4NET
         /// <param name="to"></param>
         /// <param name="jsonUMFMessage"></param>
         /// <returns></returns>
-        Task SendBroadcastMessage(string to, string jsonUMFMessage);
+        Task SendBroadcastMessageAsync(string to, string jsonUMFMessage);
 
         /// <summary>
         /// Serializes and sends a message to all instances of a service
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        Task SendBroadcastMessage(IUMF message);
+        Task SendBroadcastMessageAsync(IUMF message);
 
         /// <summary>
         /// Sends a message to a service instance
@@ -105,7 +103,7 @@ namespace Hydra4NET
         /// <param name="to"></param>
         /// <param name="jsonUMFMessage"></param>
         /// <returns></returns>
-        Task SendMessage(string to, string jsonUMFMessage);
+        Task SendMessageAsync(string to, string jsonUMFMessage);
 
         /// <summary>
         /// Serializes and sends a message to a service instance
@@ -113,7 +111,7 @@ namespace Hydra4NET
         /// <typeparam name="T"></typeparam>
         /// <param name="message"></param>
         /// <returns></returns>
-        Task SendMessage(IUMF message);
+        Task SendMessageAsync(IUMF message);
 
         /// <summary>
         /// Gets a UMF instance with default values set for sending
@@ -151,7 +149,7 @@ namespace Hydra4NET
         /// <param name="timeout"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        public Task<IInboundMessage> GetUMFResponse(IUMF msg, string? expectedType = null
+        public Task<IInboundMessage> GetUMFResponseAsync(IUMF msg, string? expectedType = null
             , TimeSpan? timeout = null, CancellationToken ct = default);
 
         /// <summary>
@@ -163,7 +161,7 @@ namespace Hydra4NET
         /// <param name="timeout"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        public Task<IInboundMessage<TResBdy>> GetUMFResponse<TResBdy>(IUMF umf, string expectedType
+        public Task<IInboundMessage<TResBdy>> GetUMFResponseAsync<TResBdy>(IUMF umf, string expectedType
             , TimeSpan? timeout = null, CancellationToken ct = default)
             where TResBdy : new();
 
@@ -173,7 +171,7 @@ namespace Hydra4NET
         /// <param name="umf"></param>
         /// <param name="broadcast"></param>
         /// <returns></returns>
-        public Task<IInboundMessageStream> GetUMFResponseStream(IUMF umf, bool broadcast = false);
+        public Task<IInboundMessageStream> GetUMFResponseStreamAsync(IUMF umf, bool broadcast = false);
 
         /// <summary>
         /// Gets a stream of typed UMF responses (via Rmid). The stream should be disposed when reading is complete. 
@@ -181,7 +179,7 @@ namespace Hydra4NET
         /// <param name="umf"></param>
         /// <param name="broadcast"></param>
         /// <returns></returns>
-        public Task<IInboundMessageStream<TResBdy>> GetUMFResponseStream<TResBdy>(IUMF umf, bool broadcast = false) where TResBdy : new();
+        public Task<IInboundMessageStream<TResBdy>> GetUMFResponseStreamAsync<TResBdy>(IUMF umf, bool broadcast = false) where TResBdy : new();
 
         /// <summary>
         /// Deserializes a json string into an IReceivedUMF

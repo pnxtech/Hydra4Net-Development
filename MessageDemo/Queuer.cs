@@ -37,8 +37,8 @@ public class Queuer : QueueProcessor
                         }
                     };
                     string json = sharedMessage.Serialize();
-                    await _hydra.MarkQueueMessage(msg.MessageJson, true);
-                    await _hydra.SendMessage(sharedMessage.To, json);
+                    await _hydra.MarkQueueMessageAsync(msg.MessageJson, true);
+                    await _hydra.SendMessageAsync(sharedMessage.To, json);
                     Console.WriteLine($"Queuer: sent completion message back to sender");
                 }
             }

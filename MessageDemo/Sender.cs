@@ -64,6 +64,6 @@ public class Sender
             }
         };
         string json = sharedMessage.Serialize();
-        await _hydra.QueueMessage(json);
+        await _hydra.QueueMessageAsync(json);
     }
 }

@@ -10,7 +10,7 @@ namespace Hydra4NET
     public partial class Hydra
     {
         //TODO: prevent deserializing twice? once for IReceivedUMF and again to cast in typed methods
-        public async Task<IInboundMessage> GetUMFResponse(IUMF umf, string? expectedType = null
+        public async Task<IInboundMessage> GetUMFResponseAsync(IUMF umf, string? expectedType = null
            , TimeSpan? timeout = null, CancellationToken ct = default)
         {
             if (umf is null)
@@ -23,7 +23,7 @@ namespace Hydra4NET
             _responseHandler.RegisterResponse(umf.Mid, expectedType, tcs);
             try
             {
-                await SendMessage(umf);
+                await SendMessageAsync(umf);
                 return await tcs.Task;
             }
             finally
@@ -32,12 +32,12 @@ namespace Hydra4NET
             }
         }
 
-        public async Task<IInboundMessage<TResBdy>> GetUMFResponse<TResBdy>(IUMF umf, string expectedType, TimeSpan? timeout = null, CancellationToken ct = default)
+        public async Task<IInboundMessage<TResBdy>> GetUMFResponseAsync<TResBdy>(IUMF umf, string expectedType, TimeSpan? timeout = null, CancellationToken ct = default)
             where TResBdy : new()
         {           
             if (umf is null)
                 throw new ArgumentNullException(nameof(umf));
-            var res = await GetUMFResponse(umf, expectedType, timeout, ct);
+            var res = await GetUMFResponseAsync(umf, expectedType, timeout, ct);
             return new InboundMessage<TResBdy>
             {
                 ReceivedUMF = res.ReceivedUMF?.ToUMF<TResBdy>(),
@@ -46,22 +46,22 @@ namespace Hydra4NET
             };
         }
 
-        public async Task<IInboundMessageStream> GetUMFResponseStream(IUMF umf, bool broadCast = false)
+        public async Task<IInboundMessageStream> GetUMFResponseStreamAsync(IUMF umf, bool broadCast = false)
         {
             if (umf is null)
                 throw new ArgumentNullException(nameof(umf));
             var stream = _responseHandler.RegisterResponseStream(umf.Mid);
-            await (broadCast ? SendBroadcastMessage(umf) : SendMessage(umf));
+            await (broadCast ? SendBroadcastMessageAsync(umf) : SendMessageAsync(umf));
             return stream;
         }
 
-        public async Task<IInboundMessageStream<TResBdy>> GetUMFResponseStream<TResBdy>(IUMF umf, bool broadCast = false)
+        public async Task<IInboundMessageStream<TResBdy>> GetUMFResponseStreamAsync<TResBdy>(IUMF umf, bool broadCast = false)
             where TResBdy : new()
         {
             if (umf is null)
                 throw new ArgumentNullException(nameof(umf));
             var stream = _responseHandler.RegisterResponseStream<TResBdy>(umf.Mid);
-            await (broadCast ? SendBroadcastMessage(umf) : SendMessage(umf));
+            await (broadCast ? SendBroadcastMessageAsync(umf) : SendMessageAsync(umf));
             return stream;
         }
     }

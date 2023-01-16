@@ -150,7 +150,7 @@ namespace Hydra4NET
             }
         }
 
-        public async Task<List<PresenceNodeEntry>> GetPresence(string serviceName)
+        public async Task<List<PresenceNodeEntry>> GetPresenceAsync(string serviceName)
         {
             List<string> instanceIds = new List<string>();
             List<PresenceNodeEntry> serviceEntries = new List<PresenceNodeEntry>();

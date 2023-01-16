@@ -93,9 +93,9 @@ namespace HostingDemo
                     });
                     string json = sharedMessage.Serialize();
                     _logger.LogInformation($"Queuer: mark message: {msg.MessageJson}");
-                    await hydra.MarkQueueMessage(msg.MessageJson ?? "", true);
+                    await hydra.MarkQueueMessageAsync(msg.MessageJson ?? "", true);
                     _logger.LogInformation($"Queuer: send json: {json}");
-                    await hydra.SendMessage(sharedMessage.To, json);
+                    await hydra.SendMessageAsync(sharedMessage.To, json);
                     _logger.LogInformation($"Queuer: sent completion message back to sender");
                 }
                 else
@@ -121,7 +121,7 @@ namespace HostingDemo
                     Id = Id,
                     Msg = $"Queuer: sending single response to {Msg} with ID of {Id}"
                 });
-                await hydra.SendMessage(sharedMessage);
+                await hydra.SendMessageAsync(sharedMessage);
                 _logger.LogInformation($"Queuer: sent single response message back to sender");
             }
 
@@ -140,7 +140,7 @@ namespace HostingDemo
                         Id = Id,
                         Msg = $"Queuer: sending response stream {i} to {Msg} with ID of {Id}"
                     });
-                    await hydra.SendMessage(sharedMessage);
+                    await hydra.SendMessageAsync(sharedMessage);
                     _logger.LogInformation($"Queuer: sent response stream message back to sender");
                 }
                 IUMF<SharedMessageBody> completeMsg = hydra.CreateUMFResponse(sm!, "response-stream-complete", new SharedMessageBody()
@@ -148,7 +148,7 @@ namespace HostingDemo
                     Id = Id,
                     Msg = $"Queuer: sending complete response stream to {Msg} with ID of {Id}"
                 });
-                await hydra.SendMessage(completeMsg);
+                await hydra.SendMessageAsync(completeMsg);
                 _logger.LogInformation($"Queuer: sent response stream complete message back to sender");
             }
         }

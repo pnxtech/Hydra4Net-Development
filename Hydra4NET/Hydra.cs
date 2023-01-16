@@ -100,9 +100,9 @@ namespace Hydra4NET
 
         #region Initialization
 
-        IServer? GetServer()=> _redis?.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
+        IServer? GetServer() => _redis?.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
 
-        public async Task Init(HydraConfigObject? config = null)
+        public async Task InitAsync(HydraConfigObject? config = null)
         {
             if (Initialized)
                 throw new HydraException("This instance has already been initialized", HydraException.ErrorType.Initialization);
@@ -175,10 +175,10 @@ namespace Hydra4NET
         }
         #endregion
 
-        public Task SendMessage(string to, string jsonUMFMessage)
+        public Task SendMessageAsync(string to, string jsonUMFMessage)
             => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
-        public Task SendMessage(IUMF message) 
+        public Task SendMessageAsync(IUMF message)
             => SendMessage(message.GetRouteEntry(), message.Serialize());
 
         private async Task SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
@@ -190,7 +190,7 @@ namespace Hydra4NET
             }
             else
             {
-                List<PresenceNodeEntry>? entries = await GetPresence(parsedEntry.ServiceName);
+                List<PresenceNodeEntry>? entries = await GetPresenceAsync(parsedEntry.ServiceName);
                 if (entries != null && entries.Count > 0)
                 {
                     // Always select first array entry because
@@ -205,10 +205,10 @@ namespace Hydra4NET
             }
         }
 
-        public Task SendBroadcastMessage(IUMF message)
+        public Task SendBroadcastMessageAsync(IUMF message)
             => SendBroadcastMessage(message.GetRouteEntry(), message.Serialize());
 
-        public Task SendBroadcastMessage(string to, string jsonUMFMessage)
+        public Task SendBroadcastMessageAsync(string to, string jsonUMFMessage)
             => SendBroadcastMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
         private async Task SendBroadcastMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
@@ -236,17 +236,17 @@ namespace Hydra4NET
             }
         }
 
-        public Task QueueMessage(IUMF umfHeader)  =>
+        public Task QueueMessageAsync(IUMF umfHeader) =>
             QueueMessage(umfHeader?.GetRouteEntry(), umfHeader?.Serialize() ?? "");
 
-        public Task QueueMessage(string jsonUMFMessage)
+        public Task QueueMessageAsync(string jsonUMFMessage)
         {
             IReceivedUMF? umfHeader = DeserializeReceviedUMF(jsonUMFMessage);
             return QueueMessage(umfHeader?.GetRouteEntry(), jsonUMFMessage);
         }
 
         //think about deserializing for them
-        public async Task<string> GetQueueMessage(string serviceName)
+        public async Task<string> GetQueueMessageAsync(string serviceName)
         {
             string jsonUMFMessage = String.Empty;
             if (_redis != null)
@@ -260,9 +260,9 @@ namespace Hydra4NET
             return jsonUMFMessage;
         }
 
-        public Task<string> GetQueueMessage() => GetQueueMessage(ServiceName ?? "");
+        public Task<string> GetQueueMessageAsync() => GetQueueMessageAsync(ServiceName ?? "");
 
-        public async Task<string> MarkQueueMessage(string jsonUMFMessage, bool completed)
+        public async Task<string> MarkQueueMessageAsync(string jsonUMFMessage, bool completed)
         {
             IReceivedUMF? umfHeader = DeserializeReceviedUMF(jsonUMFMessage);
             if (umfHeader != null && _redis != null)

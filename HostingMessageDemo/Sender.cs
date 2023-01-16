@@ -78,7 +78,7 @@ public class Sender
             }
         };
         _logger.LogDebug($"Sending message for queuer: {sharedMessage.Serialize()}");
-        await _hydra.QueueMessage(sharedMessage);
+        await _hydra.QueueMessageAsync(sharedMessage);
     }
 
     private async Task SetCacheItems()
@@ -126,7 +126,7 @@ public class Sender
                 Id = _rand.Next(),
                 Msg = "Requesting response..."
             });
-            IInboundMessage<SharedMessageBody> resp = await _hydra.GetUMFResponse<SharedMessageBody>(msg, "response");
+            IInboundMessage<SharedMessageBody> resp = await _hydra.GetUMFResponseAsync<SharedMessageBody>(msg, "response");
             IUMF<SharedMessageBody>? umf = resp?.ReceivedUMF;
             _logger.LogInformation($"Single response received: {umf?.Bdy?.Msg}");
         }
@@ -142,7 +142,7 @@ public class Sender
             Id = _rand.Next(),
             Msg = "Requesting response..."
         });
-        using (IInboundMessageStream<SharedMessageBody> resp = await _hydra.GetUMFResponseStream<SharedMessageBody>(msg))
+        using (IInboundMessageStream<SharedMessageBody> resp = await _hydra.GetUMFResponseStreamAsync<SharedMessageBody>(msg))
         {
             await foreach (var rMsg in resp.EnumerateMessagesAsync())
             {
