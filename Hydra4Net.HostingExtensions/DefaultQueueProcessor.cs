@@ -21,7 +21,5 @@ namespace Hydra4Net.HostingExtensions
             await scope.ServiceProvider.GetRequiredService<IHydraEventsHandler>()
                 .OnQueueMessageReceived(msg, Hydra);
         }
-
-
     }
 }

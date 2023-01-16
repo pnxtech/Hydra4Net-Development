@@ -28,8 +28,7 @@ namespace Hydra4Net.HostingExtensions
         {
             await base.StopAsync(cancellationToken);
             _logger.LogInformation("Hydra shutting down");
-            //since hydra implements idisposable shutdown() doesnt need to be called, it is called in dispose by the DI middleware
-
+            //since hydra implements IDisposable, shutdown() doesnt need to be called, it is called in dispose by the DI middleware
         }
 
         async Task PerformHandlerAction(Func<IHydraEventsHandler, Task> action)

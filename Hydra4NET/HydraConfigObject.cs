@@ -15,7 +15,6 @@ namespace Hydra4NET
         {
             var redis = Hydra?.Redis;
             //no default database in case the ConnectionMultiplexer is accessed outside hydra
-            //string connectionString = $"{redis?.Host}:{redis?.Port},defaultDatabase={redis?.Db}";
             string connectionString = $"{redis?.Host}:{redis?.Port}";
             if (redis?.Options != string.Empty)
             {

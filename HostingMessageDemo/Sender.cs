@@ -15,16 +15,16 @@ public class Sender
         _logger = logger;
     }
 
+    //TODO: demo caching with IDistributedCache? 
+
     public async Task ProcessMessage(string type, IReceivedUMF umf)
     {
         switch (type) // Messages dispatcher
         {
             case "start":
-                //await SetCacheItems();
                 await ProcessCommandMessage(umf);
                 break;
             case "complete":
-                //await RetrieveCacheItems();
                 ProcessCompleteMessage(umf);
                 break;
         }
@@ -78,22 +78,6 @@ public class Sender
         _logger.LogDebug($"Sending message for queuer: {sharedMessage.Serialize()}");
         await _hydra.QueueMessageAsync(sharedMessage);
     }
-
-    //TODO: demo caching with IDistributedCache? 
-    //private async Task SetCacheItems()
-    //{
-    //    string str = Guid.NewGuid().ToString();
-    //    var options = new DistributedCacheEntryOptions()
-    //        .SetSlidingExpiration(TimeSpan.FromSeconds(20));
-    //    await _cache.SetStringAsync("Test", str, options);
-    //    _logger.LogInformation($"Cached value: {str}");
-    //}
-
-    //private async Task RetrieveCacheItems()
-    //{
-    //    string str = await _cache.GetStringAsync("Test");
-    //    _logger.LogInformation($"Retrieved cached value: {str}");
-    //}
 
     static readonly Random _rand = new Random();
 

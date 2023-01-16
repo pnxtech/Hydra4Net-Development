@@ -22,7 +22,8 @@ namespace Hydra4Net.HostingExtensions
                 return hydra;
             }));
             services.AddHostedService<HydraBackgroundService>();
-            services.AddSingleton(config); // dangerous since HydraConfigObject is not immutable, but it only matters at init()?
+            //TODO: make HydraConfigObject implement an interface with getters only
+            services.AddSingleton(config); // dangerous since HydraConfigObject is not immutable, but it only matters at init()
             services.AddSingleton<DefaultQueueProcessor>();
             return services;
         }

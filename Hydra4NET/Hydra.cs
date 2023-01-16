@@ -119,8 +119,6 @@ namespace Hydra4NET
             return _redis.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
         }
 
-        //IServer? GetServer() => _redis?.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
-
         public async Task InitAsync(HydraConfigObject? config = null)
         {
             if (Initialized)
@@ -304,7 +302,6 @@ namespace Hydra4NET
                 _cts?.Dispose();
             }
             catch { }
-
         }
 
         public void Dispose()

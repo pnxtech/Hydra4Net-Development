@@ -92,15 +92,12 @@ namespace Hydra4NET
             switch (_slidingDuration)
             {
                 case SlidingDuration.BaseDelay:
-                    //Console.WriteLine("QueueProcessor: updating from NoDelay to ShortDelay");
                     _slidingDuration = SlidingDuration.ShortDelay;
                     break;
                 case SlidingDuration.ShortDelay:
-                    //Console.WriteLine("QueueProcessor: updating from ShortDelay to LongerDelay");
                     _slidingDuration = SlidingDuration.LongerDelay;
                     break;
                 case SlidingDuration.LongerDelay:
-                    //Console.WriteLine("QueueProcessor: updating from LongerDelay to LongestDelay");
                     _slidingDuration = SlidingDuration.LongestDelay;
                     break;
             }
