@@ -19,6 +19,13 @@ var host = Host.CreateDefaultBuilder(args)
             //could also implement IHydraEventsHandler interface without base class
             .AddHydraEventHandler<SampleMessageHandler>();
         services.AddSingleton<Sender>();
+        //services.AddStackExchangeRedisCache(o =>
+        //{
+        //    o.ConnectionMultiplexerFactory = () =>
+        //    {
+        //        return Task.FromResult(services.BuildServiceProvider().GetRequiredService<IHydra>().GetRedisConnection());
+        //    };
+        //});
     }).Build();
 
 await host.RunAsync();

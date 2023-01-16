@@ -72,7 +72,7 @@ namespace Hydra4NET
         public string? InstanceID { get; private set; }
         public bool Initialized { get; private set; }
 
-        private ConnectionMultiplexer? _redis;
+        private IConnectionMultiplexer? _redis;
 
 
         #endregion // Class variables
@@ -98,22 +98,40 @@ namespace Hydra4NET
             ServiceIP = _config?.Hydra?.ServiceIP;
         }
 
+        /// <summary>
+        /// Retrieves a database instance using the configured DB number
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="HydraException"></exception>
+        public IDatabase GetDatabase()
+        {
+            if (_redis == null || _config == null)
+                throw new HydraException("Hydra has not been initialized, cannot retrieve a Database instance", HydraException.ErrorType.NotInitialized);
+            return _redis.GetDatabase(_config.Hydra?.Redis?.Db ?? 0);
+        }
+
         #region Initialization
 
-        IServer? GetServer() => _redis?.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
+        public IServer GetServer()
+        {
+            if (_redis == null || _config == null)
+                throw new HydraException("Hydra has not been initialized, cannot retrieve a Server instance", HydraException.ErrorType.NotInitialized);
+            return _redis.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
+        }
+
+        //IServer? GetServer() => _redis?.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
 
         public async Task InitAsync(HydraConfigObject? config = null)
         {
             if (Initialized)
-                throw new HydraException("This instance has already been initialized", HydraException.ErrorType.Initialization);
+                throw new HydraException("This instance has already been initialized", HydraException.ErrorType.InitializationError);
             if (config != null)
                 LoadConfig(config);
             if (_config is null)
-                throw new HydraException("No HydraConfigObject has been provided", HydraException.ErrorType.Initialization);
+                throw new HydraException("No HydraConfigObject has been provided", HydraException.ErrorType.InitializationError);
             try
             {
                 //probably throw if no config passed or invalid?
-                _internalTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting
                 HostName = Dns.GetHostName();
                 ProcessID = Process.GetCurrentProcess().Id;
                 Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
@@ -151,16 +169,16 @@ namespace Hydra4NET
                 }
                 InstanceID = Guid.NewGuid().ToString().Replace("-", "");
                 _redis = ConnectionMultiplexer.Connect(_config.GetRedisConnectionString());
-                //validate conn string here and give detailed errors if something missing?
+                //TODO: validate conn string here and give detailed errors if something missing?
                 if (_redis != null && _redis.IsConnected)
                 {
-                    //_server = _redis.GetServer($"{_config.Hydra?.Redis?.Host}:{_config.Hydra?.Redis?.Port}");
                     await RegisterService();
+                    _internalTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting
                     Initialized = true;
                 }
                 else
                 {
-                    throw new HydraException("Failed to initialize Hydra, connection to redis failed", HydraException.ErrorType.Initialization);
+                    throw new HydraException("Failed to initialize Hydra, connection to redis failed", HydraException.ErrorType.InitializationError);
                 }
             }
             catch (HydraException)
@@ -169,7 +187,7 @@ namespace Hydra4NET
             }
             catch (Exception e)
             {
-                throw new HydraException("Failed to initialize Hydra", e, HydraException.ErrorType.Initialization);
+                throw new HydraException("Failed to initialize Hydra", e, HydraException.ErrorType.InitializationError);
             }
 
         }
@@ -230,9 +248,9 @@ namespace Hydra4NET
 
         private async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
         {
-            if (string.IsNullOrEmpty(entry?.Error) && _redis != null)
+            if (string.IsNullOrEmpty(entry?.Error))
             {
-                await _redis.GetDatabase().ListLeftPushAsync($"{_redis_pre_key}:{entry!.ServiceName}:mqrecieved", jsonUMFMessage);
+                await GetDatabase().ListLeftPushAsync($"{_redis_pre_key}:{entry!.ServiceName}:mqrecieved", jsonUMFMessage);
             }
         }
 
@@ -248,16 +266,11 @@ namespace Hydra4NET
         //think about deserializing for them
         public async Task<string> GetQueueMessageAsync(string serviceName)
         {
-            string jsonUMFMessage = String.Empty;
-            if (_redis != null)
-            {
-                var result = await _redis.GetDatabase().ListRightPopLeftPushAsync(
-                    $"{_redis_pre_key}:{serviceName}:mqrecieved",
-                    $"{_redis_pre_key}:{serviceName}:mqinprogress"
-                );
-                jsonUMFMessage = (string?)result ?? "";
-            }
-            return jsonUMFMessage;
+            var result = await GetDatabase().ListRightPopLeftPushAsync(
+                $"{_redis_pre_key}:{serviceName}:mqrecieved",
+                $"{_redis_pre_key}:{serviceName}:mqinprogress"
+            );
+            return (string?)result ?? "";
         }
 
         public Task<string> GetQueueMessageAsync() => GetQueueMessageAsync(ServiceName ?? "");
@@ -270,7 +283,7 @@ namespace Hydra4NET
                 UMFRouteEntry entry = umfHeader.GetRouteEntry();
                 if (entry != null)
                 {
-                    var db = _redis.GetDatabase();
+                    var db = GetDatabase();
                     await db.ListRemoveAsync($"{_redis_pre_key}:{entry.ServiceName}:mqinprogress", jsonUMFMessage, -1);
                     if (completed == false)
                     {
@@ -340,7 +353,7 @@ namespace Hydra4NET
         {
             if (_redis != null)
             {
-                var db = _redis.GetDatabase();
+                var db = GetDatabase();
                 var key = $"{_redis_pre_key}:{ServiceName}:service";
                 await db.StringSetAsync(key, StandardSerializer.Serialize(new RegistrationEntry
                 {
@@ -355,6 +368,15 @@ namespace Hydra4NET
                 _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(HandleMessage);
                 _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(HandleMessage);
             }
+        }
+
+        public IConnectionMultiplexer GetRedisConnection()
+        {
+            if (!Initialized)
+                throw new HydraException("Hydra has not been initialized, so the connection is not available", HydraException.ErrorType.NotInitialized);
+            if (_redis is null)
+                throw new HydraException("The connection is unavailable");
+            return _redis;
         }
     }
 }

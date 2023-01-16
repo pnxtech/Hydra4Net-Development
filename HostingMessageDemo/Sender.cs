@@ -20,11 +20,11 @@ public class Sender
         switch (type) // Messages dispatcher
         {
             case "start":
-                await SetCacheItems();
+                //await SetCacheItems();
                 await ProcessCommandMessage(umf);
                 break;
             case "complete":
-                await RetrieveCacheItems();
+                //await RetrieveCacheItems();
                 ProcessCompleteMessage(umf);
                 break;
         }
@@ -33,7 +33,6 @@ public class Sender
     private async Task ProcessCommandMessage(IReceivedUMF umf)
     {
         IUMF<CommandMessageBody> msg = umf.ToUMF<CommandMessageBody>();
-        //CommandMessage? msg = umf.Cast<CommandMessage, CommandMessageBody>();
         if (msg != null)
         {
             switch (msg.Bdy?.Cmd)
@@ -57,7 +56,6 @@ public class Sender
     private void ProcessCompleteMessage(IReceivedUMF umf)
     {
         IUMF<SharedMessageBody> msg = umf.ToUMF<SharedMessageBody>();
-        //SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
         if (msg != null)
         {
             _logger.LogInformation($"Sender: complete message received {msg.Bdy?.Msg}");
@@ -81,39 +79,21 @@ public class Sender
         await _hydra.QueueMessageAsync(sharedMessage);
     }
 
-    private async Task SetCacheItems()
-    {
-        bool bVal = true;
-        await _hydra.SetCacheBool("bool", bVal);
-        _logger.LogInformation($"Cached bool value: {bVal}");
+    //TODO: demo caching with IDistributedCache? 
+    //private async Task SetCacheItems()
+    //{
+    //    string str = Guid.NewGuid().ToString();
+    //    var options = new DistributedCacheEntryOptions()
+    //        .SetSlidingExpiration(TimeSpan.FromSeconds(20));
+    //    await _cache.SetStringAsync("Test", str, options);
+    //    _logger.LogInformation($"Cached value: {str}");
+    //}
 
-        string sVal = "String Value:" + _rand.Next().ToString();
-        await _hydra.SetCacheString("string", sVal);
-        _logger.LogInformation($"Cached string value: '{sVal}'");
-
-        SharedMessageBody oVal = new SharedMessageBody
-        {
-            Id = _rand.Next(),
-            Msg = "Message: " + _rand.Next().ToString()
-        };
-        await _hydra.SetCacheJson("json", oVal);
-        _logger.LogInformation($"Cached JSON value Id: '{oVal.Id}', Msg: '{oVal.Msg}' ");
-    }
-
-    private async Task RetrieveCacheItems()
-    {
-        bool? bVal = await _hydra.GetCacheBool("bool");
-        await _hydra.RemoveCacheItem("bool");
-        _logger.LogInformation($"Retrieved cached bool value: {bVal}");
-
-        string? sVal = await _hydra.GetCacheString("string");
-        await _hydra.RemoveCacheItem("string");
-        _logger.LogInformation($"Retrieved cached string value: '{sVal}'");
-
-        SharedMessageBody? oVal = await _hydra.GetCacheJson<SharedMessageBody>("json");
-        await _hydra.RemoveCacheItem("json");
-        _logger.LogInformation($"Retrieved cached JSON value Id: '{oVal?.Id}', Msg: '{oVal?.Msg}' ");
-    }
+    //private async Task RetrieveCacheItems()
+    //{
+    //    string str = await _cache.GetStringAsync("Test");
+    //    _logger.LogInformation($"Retrieved cached value: {str}");
+    //}
 
     static readonly Random _rand = new Random();
 

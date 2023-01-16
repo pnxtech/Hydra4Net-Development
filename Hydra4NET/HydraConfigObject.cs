@@ -7,14 +7,16 @@ using System.Text.Json;
  */
 namespace Hydra4NET
 {
-
+    //TODO: We can probably make "hydraRoot" the top level, instead of nesting it
     public class HydraConfigObject
     {
         public HydraRoot? Hydra { get; set; }
         public string GetRedisConnectionString()
         {
             var redis = Hydra?.Redis;
-            string connectionString = $"{redis?.Host}:{redis?.Port},defaultDatabase={redis?.Db}";
+            //no default database in case the ConnectionMultiplexer is accessed outside hydra
+            //string connectionString = $"{redis?.Host}:{redis?.Port},defaultDatabase={redis?.Db}";
+            string connectionString = $"{redis?.Host}:{redis?.Port}";
             if (redis?.Options != string.Empty)
             {
                 connectionString = $"{connectionString},{redis?.Options}";

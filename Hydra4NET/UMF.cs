@@ -21,7 +21,7 @@ namespace Hydra4NET
         protected string _Mid;
         protected string _Type;
         protected string _Version;
-        protected string _Timestamp;
+        protected DateTime _Timestamp;
 
         public UMFBase()
         {
@@ -30,7 +30,7 @@ namespace Hydra4NET
             _Mid = Guid.NewGuid().ToString();
             _Type = String.Empty;
             _Version = _UMF_Version;
-            _Timestamp = Iso8601.GetTimestamp();
+            _Timestamp = DateTime.Now;
         }
 
         public string To
@@ -65,7 +65,7 @@ namespace Hydra4NET
             set { _Version = value; }
         }
 
-        public string Ts
+        public DateTime Ts
         {
             get { return _Timestamp; }
             set { _Timestamp = value; }

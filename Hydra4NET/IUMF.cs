@@ -1,4 +1,6 @@
-﻿namespace Hydra4NET
+﻿using System;
+
+namespace Hydra4NET
 {
     public interface IUMF
     {
@@ -30,7 +32,7 @@
         /// <summary>
         /// Iso 8601 timestamp on whic hthe message what created
         /// </summary>
-        string Ts { get; set; }
+        DateTime Ts { get; set; }
 
         /// <summary>
         /// The type of message.  Used to deserialize the body

@@ -7,7 +7,8 @@ namespace Hydra4NET
         public enum ErrorType
         {
             Other,
-            Initialization
+            InitializationError,
+            NotInitialized
             //TODO: add more as required
         }
 

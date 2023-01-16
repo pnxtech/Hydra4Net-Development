@@ -1,4 +1,5 @@
-﻿using System;
+﻿using StackExchange.Redis;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -139,7 +140,7 @@ namespace Hydra4NET
         /// Gets the from route for this Hydra service
         /// </summary>
         /// <returns></returns>
-        string GetServiceFrom();
+        public string GetServiceFrom();
 
         /// <summary>
         /// Sends a message and gets a response from the first message to respond (via Rmid) with the optional exected type.  The default timeout is 30 seconds.
@@ -188,87 +189,17 @@ namespace Hydra4NET
         /// <returns></returns>
         public IReceivedUMF? DeserializeReceviedUMF(string json);
 
-        #region Cache
-
         /// <summary>
-        /// Caches a string with redis
+        /// Gets Hydra's redis ConnectionMultiplexer instance.  It is strongly recommended to use a different Database number than the one used for Hydra for non-Hydra activity.
         /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="expiry"></param>
-        /// <param name="token"></param>
         /// <returns></returns>
-        Task<bool> SetCacheString(string key, string value, TimeSpan? expiry = null);
+        public IConnectionMultiplexer GetRedisConnection();
 
-        /// <summary>
-        /// Retrieves a cached string from redis
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        Task<string?> GetCacheString(string key);
-
-        /// <summary>
-        /// Caches a byte array with redis
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="expiry"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        Task<bool> SetCacheBytes(string key, byte[] value, TimeSpan? expiry = null);
-
-        /// <summary>
-        /// Retrieves a cached byte array from redis
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        Task<byte[]?> GetCacheBytes(string key);
-
-        /// <summary>
-        /// Caches a bool with redis
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="expiry"></param>
-        /// <returns></returns>
-        Task<bool> SetCacheBool(string key, bool value, TimeSpan? expiry = null);
-
-        /// <summary>
-        /// Retrieves a cached bool from redis
-        /// </summary>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        Task<bool?> GetCacheBool(string key);
-
-        /// <summary>
-        /// Serializes to JSON and caches an object with redis.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <param name="expiry"></param>
-        /// <returns></returns>
-        Task<bool> SetCacheJson<T>(string key, T value, TimeSpan? expiry = null) where T : class;
-
-        /// <summary>
-        /// Retrieves a cached JSON string from redis and deserializes it
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="key"></param>
-        /// <returns></returns>
-        Task<T?> GetCacheJson<T>(string key) where T : class;
-
-        /// <summary>
-        /// Clears a cached item
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
-        Task<bool> RemoveCacheItem(string key);
-
-        #endregion
+        ///// <summary>
+        ///// Returns a task that can be awaited until hydra has been initialized.  Used if 
+        ///// </summary>
+        ///// <returns></returns>
+        //public Task WaitInitialized();
 
         /// <summary>
         /// Called by Dispose(). Cleans up resources associated with this instance.
