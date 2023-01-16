@@ -9,6 +9,6 @@
 
     public interface IInboundMessage<T> : IInboundMessage
     {
-        new IUMF<T>? ReceivedUMF { get; set; }       
+        new IUMF<T>? ReceivedUMF { get; set; }
     }
 }

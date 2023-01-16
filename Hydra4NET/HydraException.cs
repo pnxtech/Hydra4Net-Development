@@ -15,6 +15,6 @@ namespace Hydra4NET
 
         public HydraException(string message, ErrorType type = ErrorType.Other) : base(message) { Type = type; }
 
-        public HydraException(string message, Exception innerException, ErrorType type = ErrorType.Other) : base(message, innerException) { Type = type;  }
+        public HydraException(string message, Exception innerException, ErrorType type = ErrorType.Other) : base(message, innerException) { Type = type; }
     }
 }

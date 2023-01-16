@@ -1,9 +1,9 @@
-﻿using System;
+﻿using Hydra4NET.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Hydra4NET.Helpers;
 
 /**
  * Hydra Health and Presence module

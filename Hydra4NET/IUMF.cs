@@ -51,7 +51,7 @@
         UMFRouteEntry GetRouteEntry();
     }
 
-    public interface IUMF<TBdy>  : IUMF
+    public interface IUMF<TBdy> : IUMF
     {
         /// <summary>
         /// The customizable typed body of the message

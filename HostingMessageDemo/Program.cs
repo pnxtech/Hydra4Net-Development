@@ -18,7 +18,7 @@ var host = Host.CreateDefaultBuilder(args)
             .AddHydra(config)
             //could also implement IHydraEventsHandler interface without base class
             .AddHydraEventHandler<SampleMessageHandler>();
-        services.AddSingleton<Sender>();   
+        services.AddSingleton<Sender>();
     }).Build();
 
 await host.RunAsync();

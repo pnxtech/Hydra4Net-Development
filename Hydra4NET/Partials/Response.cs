@@ -1,9 +1,7 @@
 ﻿using Hydra4NET.Internal;
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Hydra4NET
 {
@@ -34,7 +32,7 @@ namespace Hydra4NET
 
         public async Task<IInboundMessage<TResBdy>> GetUMFResponseAsync<TResBdy>(IUMF umf, string expectedType, TimeSpan? timeout = null, CancellationToken ct = default)
             where TResBdy : new()
-        {           
+        {
             if (umf is null)
                 throw new ArgumentNullException(nameof(umf));
             var res = await GetUMFResponseAsync(umf, expectedType, timeout, ct);

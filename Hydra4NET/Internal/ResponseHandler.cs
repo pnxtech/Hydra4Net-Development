@@ -111,7 +111,7 @@ namespace Hydra4NET.Internal
             return resp;
         }
 
-        public InboundMessageStream<TResBdy> RegisterResponseStream<TResBdy>(string mid) where TResBdy: new()
+        public InboundMessageStream<TResBdy> RegisterResponseStream<TResBdy>(string mid) where TResBdy : new()
         {
             ConfirmMessageNotResgistered(mid);
             InboundMessageStream<TResBdy> resp = new InboundMessageStream<TResBdy>(mid);
