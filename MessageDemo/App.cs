@@ -1,4 +1,5 @@
 ﻿using Hydra4NET;
+using Microsoft.Extensions.Configuration;
 
 namespace MessageDemo;
 
@@ -13,8 +14,15 @@ public class App
         Sender? sender = null;
         Queuer? queuer = null;
 
-        // Create an instance of Hydra4Net
-        Hydra hydra = new();
+        HydraConfigObject? config = HydraConfigObject.Load("config.json");
+        if (config == null)
+        {
+            Console.WriteLine("Hydra config.json not found");
+            Environment.Exit(1);
+        }
+
+        // Create an instance of Hydra4Net using the loaded config file
+        Hydra hydra = new(config);
 
         AppDomain.CurrentDomain.ProcessExit += AppDomain_ProcessExit;
         void AppDomain_ProcessExit(object? sender, EventArgs e)
@@ -23,15 +31,10 @@ public class App
         }
 
         // Load the hydra config.json file
-        HydraConfigObject? config = Configuration.Load("config.json");
-        if (config == null)
-        {
-            Console.WriteLine("Hydra config.json not found");
-            Environment.Exit(1);
-        }
+      
 
-        // Initialize Hydra using the loaded config file
-        await hydra.Init(config);
+        // Initialize Hydra 
+        await hydra.InitAsync();
 
         // Determine whether this instance of MessageDemo
         // should play the role of a sender or a queuer
@@ -55,12 +58,12 @@ public class App
         Console.WriteLine();
 
         // Setup an OnMessageHandler to recieve incoming messages
-        hydra.OnMessageHandler(async (IReceivedUMF? umf, string type, string? message) =>
+        hydra.OnMessageHandler(async (msg) =>
         {
-            Console.WriteLine($"Sender: received message of type {type}");
-            if (sender != null && message != null)
+            Console.WriteLine($"Sender: received message of type {msg.Type}");
+            if (sender != null && msg.MessageJson != null)
             {
-                await sender.ProcessMessage(type, message);
+                await sender.ProcessMessage(msg.Type, msg.MessageJson);
                 Console.WriteLine();
             }
         });

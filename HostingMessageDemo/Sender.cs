@@ -15,6 +15,8 @@ public class Sender
         _logger = logger;
     }
 
+    //TODO: demo caching with IDistributedCache? 
+
     public async Task ProcessMessage(string type, IReceivedUMF umf)
     {
         switch (type) // Messages dispatcher
@@ -23,15 +25,14 @@ public class Sender
                 await ProcessCommandMessage(umf);
                 break;
             case "complete":
-                ProcessSenderMessage(umf);
+                ProcessCompleteMessage(umf);
                 break;
         }
     }
 
     private async Task ProcessCommandMessage(IReceivedUMF umf)
     {
-        UMF<CommandMessageBody> msg = umf.ToUMF<CommandMessageBody>();
-        //CommandMessage? msg = umf.Cast<CommandMessage, CommandMessageBody>();
+        IUMF<CommandMessageBody> msg = umf.ToUMF<CommandMessageBody>();
         if (msg != null)
         {
             switch (msg.Bdy?.Cmd)
@@ -40,17 +41,24 @@ public class Sender
                     _logger.LogInformation("Sender: queuing message for Queuer");
                     await QueueMessageForQueuer();
                     break;
+                case "start-respond":
+                    _logger.LogInformation("Sender: sending message for response");
+                    await SendResponseMessage();
+                    break;
+                case "start-respond-stream":
+                    _logger.LogInformation("Sender: sending message for response");
+                    await SendResponseStreamMessage();
+                    break;
             }
         }
     }
 
-    private void ProcessSenderMessage(IReceivedUMF umf)
+    private void ProcessCompleteMessage(IReceivedUMF umf)
     {
-        UMF<SharedMessageBody> msg = umf.ToUMF<SharedMessageBody>();
-        //SharedMessage? msg = SharedMessage.Deserialize<SharedMessage>(message);
+        IUMF<SharedMessageBody> msg = umf.ToUMF<SharedMessageBody>();
         if (msg != null)
         {
-            _logger.LogInformation($"Sender: message received {msg.Bdy?.Msg}");
+            _logger.LogInformation($"Sender: complete message received {msg.Bdy?.Msg}");
         }
     }
 
@@ -59,15 +67,59 @@ public class Sender
         UMF<SharedMessageBody> sharedMessage = new()
         {
             To = "queuer-svcs:/",
-            Frm = $"{_hydra.InstanceID}@{_hydra.ServiceName}:/",
+            Frm = _hydra.GetServiceFrom(),
             Typ = "queuer",
             Bdy = new()
             {
-                Id = 1,
+                Id = _rand.Next(),
                 Msg = "Sample job queue message"
             }
         };
         _logger.LogDebug($"Sending message for queuer: {sharedMessage.Serialize()}");
-        await _hydra.QueueMessage(sharedMessage);
+        await _hydra.QueueMessageAsync(sharedMessage);
+    }
+
+    static readonly Random _rand = new Random();
+
+    private async Task SendResponseMessage()
+    {
+        try
+        {
+            var msg = _hydra.CreateUMF<SharedMessageBody>("queuer-svcs:/", "respond", new()
+            {
+                Id = _rand.Next(),
+                Msg = "Requesting response..."
+            });
+            IInboundMessage<SharedMessageBody> resp = await _hydra.GetUMFResponseAsync<SharedMessageBody>(msg, "response");
+            IUMF<SharedMessageBody>? umf = resp?.ReceivedUMF;
+            _logger.LogInformation($"Single response received: {umf?.Bdy?.Msg}");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "failed to receive single message");
+        }
+    }
+    private async Task SendResponseStreamMessage()
+    {
+        var msg = _hydra.CreateUMF<SharedMessageBody>("queuer-svcs:/", "respond-stream", new()
+        {
+            Id = _rand.Next(),
+            Msg = "Requesting response..."
+        });
+        using (IInboundMessageStream<SharedMessageBody> resp = await _hydra.GetUMFResponseStreamAsync<SharedMessageBody>(msg))
+        {
+            await foreach (var rMsg in resp.EnumerateMessagesAsync())
+            {
+                //umfs are cast for you 
+                IUMF<SharedMessageBody>? rUmf = rMsg?.ReceivedUMF;
+                if (rMsg?.Type == "response-stream")
+                    _logger.LogInformation($"Response stream message received: {rUmf?.Bdy?.Msg}");
+                else if (rMsg?.Type == "response-stream-complete")
+                {
+                    _logger.LogInformation("Response stream complete");
+                    break;
+                }
+            }
+        }
     }
 }

@@ -1,6 +1,5 @@
-﻿using System;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using Hydra4NET.Helpers;
+using System;
 
 /**
  * UMF - Universal Message Format
@@ -10,35 +9,6 @@ using System.Text.Json.Serialization;
  */
 namespace Hydra4NET
 {
-    /// <summary>
-    /// Used to hold parsed UMF route entries
-    /// </summary>
-    public class UMFRouteEntry
-    {
-        private string error = String.Empty;
-        public string Instance { get; set; } = String.Empty;
-        public string SubID { get; set; } = String.Empty;
-        public string ServiceName { get; set; } = String.Empty;
-        public string HttpMethod { get; set; } = String.Empty;
-        public string ApiRoute { get; set; } = String.Empty;
-        public string Error
-        {
-            get
-            {
-                return error;
-            }
-            set
-            {
-                Instance = String.Empty;
-                SubID = String.Empty;
-                ServiceName = String.Empty;
-                HttpMethod = String.Empty;
-                ApiRoute = String.Empty;
-                error = value;
-            }
-        }
-    }
-
     /**
      * UMFBase
      * UMF base class used by the UMF class
@@ -51,7 +21,7 @@ namespace Hydra4NET
         protected string _Mid;
         protected string _Type;
         protected string _Version;
-        protected string _Timestamp;
+        protected DateTime _Timestamp;
 
         public UMFBase()
         {
@@ -60,7 +30,7 @@ namespace Hydra4NET
             _Mid = Guid.NewGuid().ToString();
             _Type = String.Empty;
             _Version = _UMF_Version;
-            _Timestamp = Iso8601.GetTimestamp();
+            _Timestamp = DateTime.UtcNow;
         }
 
         public string To
@@ -81,6 +51,8 @@ namespace Hydra4NET
             set { _Mid = value; }
         }
 
+        public string? Rmid { get; set; }
+
         public string Typ
         {
             get { return _Type; }
@@ -93,13 +65,17 @@ namespace Hydra4NET
             set { _Version = value; }
         }
 
-        public string Ts
+        public DateTime Ts
         {
             get { return _Timestamp; }
-            set { _Timestamp = value; }
+            set
+            {
+                //ensure serialization works as expected
+                _Timestamp = value.ToUniversalTime();
+            }
         }
 
-        public virtual object Bdy { get; set; }
+        public virtual object? Bdy { get; set; }
 
         /// <summary>
         ///Parses a string based UMF route into individual route entries.
@@ -190,10 +166,8 @@ namespace Hydra4NET
     public class UMF<TBdy> : UMFBase, IUMF<TBdy> where TBdy : new()
     {
         public new TBdy Bdy { get; set; } = new TBdy();
-        public UMF() : base()
-        {
 
-        }
+        public UMF() : base() { }
 
         /// <summary>
         /// Deserializes a UMF JSON message into a typed UMF class instance
@@ -207,40 +181,6 @@ namespace Hydra4NET
         /// </summary>
         /// <returns></returns>
         public string Serialize() => StandardSerializer.Serialize(this);
-    }
-
-    /// <summary>
-    /// The UMF class that's used to implement an untyped UMF and body message pair.
-    /// </summary>
-    internal class ReceivedUMF : UMF<JsonElement>, IReceivedUMF
-    {
-        public ReceivedUMF() : base() { }
-
-        /// <summary>
-        /// The original message's JSON value
-        /// </summary>
-        [JsonIgnore] //prevent System.Text.Json from serializing / deserializing
-        public string MessageJson { get; private set; }
-
-        /// <summary>
-        /// Deserializes a UMF JSON message into an untyped UMF class instance
-        /// </summary>
-        /// <param name="message"></param>
-        /// <returns></returns>
-        public static new ReceivedUMF? Deserialize(string message)
-        {
-            var umf = StandardSerializer.Deserialize<ReceivedUMF>(message);
-            if (umf != null)
-                umf.MessageJson = message;
-            return umf;
-        }
-
-        /// <summary>
-        /// Casts an untyped UMF instance to a typed instance
-        /// </summary>
-        /// <typeparam name="TBdy"></typeparam>
-        /// <returns></returns>
-        public UMF<TBdy> ToUMF<TBdy>() where TBdy : new() => UMF<TBdy>.Deserialize(MessageJson)!;
     }
 }
 

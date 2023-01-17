@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace Hydra4NET
+namespace Hydra4NET.Helpers
 {
     public class StandardSerializer
     {
@@ -24,7 +24,16 @@ namespace Hydra4NET
         {
             return JsonSerializer.Serialize(item, new JsonSerializerOptions()
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            });
+        }
+
+        static internal string SerializeForCache<T>(T item)
+        {
+            return JsonSerializer.Serialize(item, new JsonSerializerOptions()
+            {
+                IgnoreNullValues = true,
+                IgnoreReadOnlyProperties = true,
             });
         }
     }

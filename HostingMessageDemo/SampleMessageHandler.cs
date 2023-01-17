@@ -9,7 +9,7 @@ namespace HostingDemo
     {
         private ILogger<SampleMessageHandler> _logger;
 
-        private string _mode;
+        private string _mode = "";
         private Sender _sender;
 
         public SampleMessageHandler(ILogger<SampleMessageHandler> logger, HydraConfigObject config, Sender sender)
@@ -38,65 +38,119 @@ namespace HostingDemo
             }
         }
 
-        public override async Task OnMessageReceived(IReceivedUMF umf, string type, string? message, IHydra hydra)
+        public override async Task OnMessageReceived(IInboundMessage msg, IHydra hydra)
         {
-            _logger.LogInformation($"Received message of type {type}");
-            if (_mode == Modes.Sender && umf != null)
+            _logger.LogInformation($"Received message of type {msg.Type}");
+            if (_mode == Modes.Sender && msg.ReceivedUMF != null)
             {
-                if (type == "start")
-                    await _sender.ProcessMessage(type, umf);
+                await _sender.ProcessMessage(msg.Type, msg.ReceivedUMF);
+            }
+            else if (_mode == Modes.Queuer)
+            {
+                if (msg.Type == "respond")
+                {
+                    await HandleRespondType(msg, hydra);
+                }
+                else if (msg.Type == "respond-stream")
+                {
+                    await HandleResponseStreamType(msg, hydra);
+                }
             }
         }
 
-        public override async Task OnQueueMessageReceived(IReceivedUMF umf, string type, string? message, IHydra hydra)
+        public override async Task OnQueueMessageReceived(IInboundMessage msg, IHydra hydra)
         {
-            if (type != Modes.Queuer)
+            if (msg.Type != Modes.Queuer)
                 return;
             try
             {
                 _logger.LogInformation($"Queuer: processing queued message from sender");
-                if (type != "queuer")
-                    return;
-                UMF<SharedMessageBody>? sm = umf.ToUMF<SharedMessageBody>();
-                if (sm != null)
+                if (msg.Type == "queuer")
                 {
-                    int? Id = sm?.Bdy?.Id ?? 0;
-                    string? Msg = sm?.Bdy?.Msg ?? string.Empty;
-                    if (Msg != string.Empty)
-                    {
-                        UMF<SharedMessageBody> sharedMessage = new()
-                        {
-                            To = "sender-svcs:/",
-                            Frm = $"{hydra.InstanceID}@{hydra.ServiceName}:/",
-                            Typ = "complete",
-                            Bdy = new()
-                            {
-                                Id = Id,
-                                Msg = $"Queuer: processed message containing {Msg} with ID of {Id}"
-                            }
-                        };
-                        string json = sharedMessage.Serialize();
-                        _logger.LogInformation($"Queuer: mark message: {message}");
-                        await hydra.MarkQueueMessage(message, true);
-                        _logger.LogInformation($"Queuer: send json: {json}");
-                        await hydra.SendMessage(sharedMessage.To, json);
-                        _logger.LogInformation($"Queuer: sent completion message back to sender");
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Queue Msg null: {0}", message);
-                    }
+                    await HandleQueuerType(msg, hydra);
                 }
-                else
-                {
-                    _logger.LogError("SharedMessage is null, body: {0}", message);
-                }
+
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Queue handler failed");
             }
+        }
 
+        private async Task HandleQueuerType(IInboundMessage msg, IHydra hydra)
+        {
+            IUMF<SharedMessageBody>? sm = msg.ReceivedUMF?.ToUMF<SharedMessageBody>();
+            if (sm != null)
+            {
+                string? Msg = sm?.Bdy?.Msg;
+                if (Msg != null)
+                {
+                    int? Id = sm?.Bdy?.Id;
+                    IUMF<SharedMessageBody> sharedMessage = hydra.CreateUMF<SharedMessageBody>("sender-svcs:/", "complete", new()
+                    {
+                        Id = Id,
+                        Msg = $"Queuer: processed message containing {Msg} with ID of {Id}"
+                    });
+                    string json = sharedMessage.Serialize();
+                    _logger.LogInformation($"Queuer: mark message: {msg.MessageJson}");
+                    await hydra.MarkQueueMessageAsync(msg.MessageJson ?? "", true);
+                    _logger.LogInformation($"Queuer: send json: {json}");
+                    await hydra.SendMessageAsync(sharedMessage.To, json);
+                    _logger.LogInformation($"Queuer: sent completion message back to sender");
+                }
+                else
+                {
+                    _logger.LogWarning("Queue Msg null: {0}", msg.MessageJson);
+                }
+            }
+            else
+            {
+                _logger.LogError("SharedMessage is null, body: {0}", msg.MessageJson);
+            }
+        }
+
+        private async Task HandleRespondType(IInboundMessage msg, IHydra hydra)
+        {
+            IUMF<SharedMessageBody>? sm = msg.ReceivedUMF?.ToUMF<SharedMessageBody>();
+            string? Msg = sm?.Bdy?.Msg;
+            if (sm != null)
+            {
+                int? Id = sm?.Bdy?.Id;
+                IUMF<SharedMessageBody> sharedMessage = hydra.CreateUMFResponse(sm!, "response", new SharedMessageBody
+                {
+                    Id = Id,
+                    Msg = $"Queuer: sending single response to {Msg} with ID of {Id}"
+                });
+                await hydra.SendMessageAsync(sharedMessage);
+                _logger.LogInformation($"Queuer: sent single response message back to sender");
+            }
+
+        }
+        private async Task HandleResponseStreamType(IInboundMessage msg, IHydra hydra)
+        {
+            IUMF<SharedMessageBody>? sm = msg.ReceivedUMF?.ToUMF<SharedMessageBody>();
+            string? Msg = sm?.Bdy?.Msg;
+            if (sm != null)
+            {
+                int? Id = sm?.Bdy?.Id;
+                for (var i = 0; i < 5; i++)
+                {
+                    IUMF<SharedMessageBody> sharedMessage = hydra.CreateUMFResponse(sm!, "response-stream", new SharedMessageBody()
+                    {
+                        Id = Id,
+                        Msg = $"Queuer: sending response stream {i} to {Msg} with ID of {Id}"
+                    });
+                    await hydra.SendMessageAsync(sharedMessage);
+                    _logger.LogInformation($"Queuer: sent response stream message back to sender");
+                }
+                IUMF<SharedMessageBody> completeMsg = hydra.CreateUMFResponse(sm!, "response-stream-complete", new SharedMessageBody()
+                {
+                    Id = Id,
+                    Msg = $"Queuer: sending complete response stream to {Msg} with ID of {Id}"
+                });
+                await hydra.SendMessageAsync(completeMsg);
+                _logger.LogInformation($"Queuer: sent response stream complete message back to sender");
+            }
         }
 
         #region Optional
@@ -105,15 +159,23 @@ namespace HostingDemo
             _logger.LogInformation($"Hydra initialized");
             return base.BeforeInit(hydra);
         }
+
         public override Task OnShutdown(IHydra hydra)
         {
             _logger.LogInformation($"Hydra shut down");
             return base.OnShutdown(hydra);
         }
+
         public override Task OnInitError(IHydra hydra, Exception e)
         {
             _logger.LogCritical(e, "A fatal error occurred initializing Hydra");
             return base.OnInitError(hydra, e);
+        }
+
+        public override Task OnDequeueError(IHydra hydra, Exception e)
+        {
+            _logger.LogWarning(e, "An error occurred while dequeueing Hydra");
+            return base.OnDequeueError(hydra, e);
         }
 
         #endregion Optional

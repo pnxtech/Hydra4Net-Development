@@ -1,6 +1,4 @@
-﻿
-
-using HostingDemo;
+﻿using HostingDemo;
 using Hydra4Net.HostingExtensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

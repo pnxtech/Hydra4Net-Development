@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Hydra4NET
+namespace Hydra4NET.Helpers
 {
     public class Iso8601
     {

@@ -7,31 +7,35 @@ using System.Text.Json;
  */
 namespace Hydra4NET
 {
-    static public class Configuration
-    {
-        static public HydraConfigObject? Load(string configPath)
-        {
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-            string json = File.ReadAllText(configPath);
-            return (JsonSerializer.Deserialize<HydraConfigObject>(json, options));
-        }
-    }
-
+    //TODO: We can probably make "hydraRoot" the top level, instead of nesting it
     public class HydraConfigObject
     {
         public HydraRoot? Hydra { get; set; }
         public string GetRedisConnectionString()
         {
             var redis = Hydra?.Redis;
-            string connectionString = $"{redis?.Host}:{redis?.Port},defaultDatabase={redis?.Db}";
+            //no default database in case the ConnectionMultiplexer is accessed outside hydra
+            string connectionString = $"{redis?.Host}:{redis?.Port}";
             if (redis?.Options != string.Empty)
             {
                 connectionString = $"{connectionString},{redis?.Options}";
             }
             return connectionString;
+        }
+
+        /// <summary>
+        /// Loads hydra config from the pecified JSON file
+        /// </summary>
+        /// <param name="configPath"></param>
+        /// <returns></returns>
+        static public HydraConfigObject? Load(string configJsonPath)
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            string json = File.ReadAllText(configJsonPath);
+            return (JsonSerializer.Deserialize<HydraConfigObject>(json, options));
         }
 
     }

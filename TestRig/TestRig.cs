@@ -1,4 +1,5 @@
 using Hydra4NET;
+using Hydra4NET.Helpers;
 using static Hydra4NET.Hydra;
 
 /**
@@ -119,7 +120,7 @@ public class Tests
 
     public async Task GetPresence(string serviceName)
     {
-        List<PresenceNodeEntry>? entries = await _hydra.GetPresence(serviceName);
+        List<PresenceNodeEntry>? entries = await _hydra.GetPresenceAsync(serviceName);
         if (entries.Count == 0)
         {
         }
@@ -138,7 +139,7 @@ public class Tests
         pingMessage.Typ = "ping";
         //string json = pingMessage.Serialize();
         //await _hydra.SendMessage(pingMessage.To, json);
-        await _hydra.SendMessage(pingMessage);
+        await _hydra.SendMessageAsync(pingMessage);
 
     }
 
@@ -156,14 +157,14 @@ public class Tests
         queueMessage.Bdy.JobID = "1234";
         queueMessage.Bdy.JobType = "Sample Job";
         queueMessage.Bdy.JobData = "Test Data";
-        await _hydra.QueueMessage(queueMessage.Serialize());
+        await _hydra.QueueMessageAsync(queueMessage.Serialize());
 
         // Retrieve queued message (dequeue)
-        string json = await _hydra.GetQueueMessage("testrig-svcs");
+        string json = await _hydra.GetQueueMessageAsync("testrig-svcs");
         QueueMsg? qm = ParseQueueMsg(json);
         Console.WriteLine(qm?.Bdy.JobID);
 
         // Mark message as processed
-        await _hydra.MarkQueueMessage(json, true);
+        await _hydra.MarkQueueMessageAsync(json, true);
     }
 }

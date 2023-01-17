@@ -28,8 +28,7 @@ namespace Hydra4Net.HostingExtensions
         {
             await base.StopAsync(cancellationToken);
             _logger.LogInformation("Hydra shutting down");
-            //since hydra implements idisposable shutdown() doesnt need to be called, it is called in dispose by the DI middleware
-
+            //since hydra implements IDisposable, shutdown() doesnt need to be called, it is called in dispose by the DI middleware
         }
 
         async Task PerformHandlerAction(Func<IHydraEventsHandler, Task> action)
@@ -43,12 +42,11 @@ namespace Hydra4Net.HostingExtensions
         {
             try
             {
-
-                _hydra.OnMessageHandler((umf, type, msg)
-                    => PerformHandlerAction(e => e.OnMessageReceived(umf, type, msg, _hydra)));
+                _hydra.OnMessageHandler((msg) => PerformHandlerAction(e => e.OnMessageReceived(msg, _hydra)));
                 await PerformHandlerAction(e => e.BeforeInit(_hydra));
-                await _hydra.Init();
+                await _hydra.InitAsync();
                 _queue.Init(stoppingToken);
+                _queue.OnDequeueError(e => PerformHandlerAction(h => h.OnDequeueError(_hydra, e)));
                 _logger.LogInformation($"Hydra {_hydra.ServiceName} ({_hydra.InstanceID}) listening on {_hydra.ServiceIP}");
             }
             catch (Exception e)

@@ -1,9 +1,21 @@
 ﻿using Hydra4NET;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using TestRig;
 
-// Create an instance of Hydra4Net
-Hydra hydra = new();
+
+// Load the hydra config.json file
+//
+HydraConfigObject? config = HydraConfigObject.Load("config.json");
+if (config == null)
+{
+    Console.WriteLine("Hydra config.json not found");
+    Environment.Exit(1);
+}
+
+
+// Create an instance of Hydra4Net using the loaded config file
+Hydra hydra = new(config);
 
 // Create an instance of a Test class for testing
 // hydra functions during development
@@ -18,36 +30,27 @@ void AppDomain_ProcessExit(object? sender, EventArgs e)
     hydra.Shutdown();
 }
 
-// Load the hydra config.json file
-//
-HydraConfigObject? config = Configuration.Load("config.json");
-if (config == null)
-{
-    Console.WriteLine("Hydra config.json not found");
-    Environment.Exit(1);
-}
-
 // Setup an OnMessageHandler to recieve incoming UMF messages
 //
-hydra.OnMessageHandler(async (IReceivedUMF? umf, string type, string? message) =>
+hydra.OnMessageHandler(async (IInboundMessage msg) =>
 {
-    Console.WriteLine($"{type}: {message}");
-    if (type == "testMsg")
+    Console.WriteLine($"{msg.Type}: {msg.MessageJson}");
+    if (msg.Type == "testMsg")
     {
-        TestMsg? tm = hydraTests.ParseTestMsg(message ?? "");
+        TestMsg? tm = hydraTests.ParseTestMsg(msg.MessageJson ?? "");
         Console.WriteLine($"msg: {tm?.Bdy?.Msg}, id: {tm?.Bdy?.Id}");
         await hydraTests.SendMessage();
     }
-    else if (type == "ping")
+    else if (msg.Type == "ping")
     {
-        PingMsg? pm = hydraTests.ParsePingMsg(message ?? "");
+        PingMsg? pm = hydraTests.ParsePingMsg(msg.MessageJson ?? "");
         Console.WriteLine($"message: {pm?.Bdy?.Message}");
     }
     await Task.Delay(1);
 });
 
-// Initialize Hydra using the loaded config file
-await hydra.Init(config);
+// Initialize Hydra 
+await hydra.InitAsync();
 
 // Tests
 //hydraTests.CreateUMFMessage();

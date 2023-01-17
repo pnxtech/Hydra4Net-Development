@@ -1,4 +1,5 @@
 ﻿using Hydra4NET;
+using Hydra4NET.Helpers;
 using MessageDemo.Models;
 
 namespace MessageDemo;
@@ -63,6 +64,6 @@ public class Sender
             }
         };
         string json = sharedMessage.Serialize();
-        await _hydra.QueueMessage(json);
+        await _hydra.QueueMessageAsync(json);
     }
 }

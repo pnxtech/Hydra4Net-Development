@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hydra4NET.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text.Json;
@@ -132,7 +133,7 @@ namespace Hydra4NET
         {
             if (_redis != null)
             {
-                var db = _redis.GetDatabase();
+                var db = GetDatabase();
                 await db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", InstanceID);
                 await db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
                 await db.HashSetAsync($"{_redis_pre_key}:nodes", InstanceID, BuildPresenceNodeEntry());
@@ -143,51 +144,49 @@ namespace Hydra4NET
         {
             if (_redis != null)
             {
-                var db = _redis.GetDatabase();
+                var db = GetDatabase();
                 await db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", BuildHealthCheckEntry());
                 await db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
             }
         }
 
-        public async Task<List<PresenceNodeEntry>> GetPresence(string serviceName)
+        public async Task<List<PresenceNodeEntry>> GetPresenceAsync(string serviceName)
         {
             List<string> instanceIds = new List<string>();
             List<PresenceNodeEntry> serviceEntries = new List<PresenceNodeEntry>();
-            if (_server != null && _redis != null)
+            var server = GetServer();
+            foreach (var key in server.Keys(pattern: $"*:{serviceName}:*:presence"))
             {
-                foreach (var key in _server.Keys(pattern: $"*:{serviceName}:*:presence"))
+                string segments = key.ToString();
+                var segmentParts = segments.Split(":");
+                if (segmentParts.Length > 4)
+                    instanceIds.Add(segmentParts[3]);
+            }
+            foreach (var id in instanceIds)
+            {
+                string? s = await GetDatabase().HashGetAsync($"{_redis_pre_key}:nodes", id);
+                if (s != null)
                 {
-                    string segments = key.ToString();
-                    var segmentParts = segments.Split(":");
-                    if (segmentParts.Length > 4)
-                        instanceIds.Add(segmentParts[3]);
-                }
-                foreach (var id in instanceIds)
-                {
-                    string? s = await _redis.GetDatabase().HashGetAsync($"{_redis_pre_key}:nodes", id);
-                    if (s != null)
+                    PresenceNodeEntry? presenceNodeEntry = JsonSerializer.Deserialize<PresenceNodeEntry>(s, new JsonSerializerOptions()
                     {
-                        PresenceNodeEntry? presenceNodeEntry = JsonSerializer.Deserialize<PresenceNodeEntry>(s, new JsonSerializerOptions()
-                        {
-                            PropertyNameCaseInsensitive = true,
-                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                        });
-                        if (presenceNodeEntry != null)
-                        {
-                            serviceEntries.Add(presenceNodeEntry);
-                        }
+                        PropertyNameCaseInsensitive = true,
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+                    if (presenceNodeEntry != null)
+                    {
+                        serviceEntries.Add(presenceNodeEntry);
                     }
                 }
-                // Shuffle array using Fisher-Yates shuffle
-                // Leverage tuples for a quick swap ;-)
-                Random rng = new Random();
-                int n = serviceEntries.Count;
-                while (n > 1)
-                {
-                    n--;
-                    int k = rng.Next(n + 1);
-                    (serviceEntries[n], serviceEntries[k]) = (serviceEntries[k], serviceEntries[n]);
-                }
+            }
+            // Shuffle array using Fisher-Yates shuffle
+            // Leverage tuples for a quick swap ;-)
+            Random rng = new Random();
+            int n = serviceEntries.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = rng.Next(n + 1);
+                (serviceEntries[n], serviceEntries[k]) = (serviceEntries[k], serviceEntries[n]);
             }
             return serviceEntries;
         }
