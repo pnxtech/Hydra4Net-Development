@@ -19,8 +19,8 @@ namespace Hydra4NET
             };
         }
 
-        public IUMF<TToBdy> CreateUMFResponse<TToBdy>(IUMF umf, string type, TToBdy bdy) where TToBdy : new()
-            => CreateUMF(umf.Frm, type, bdy, umf.Mid);
+        public IUMF<TToBdy> CreateUMFResponse<TToBdy>(IUMF fromUmf, string type, TToBdy bdy) where TToBdy : new()
+            => CreateUMF(fromUmf.Frm, type, bdy, fromUmf.Mid);
 
         public string GetServiceFrom() => $"{InstanceID}@{ServiceName}:/";
 

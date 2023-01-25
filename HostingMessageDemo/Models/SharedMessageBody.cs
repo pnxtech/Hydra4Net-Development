@@ -8,5 +8,3 @@ public class SharedMessageBody
     public string? Msg { get; set; }
     public int? Id { get; set; }
 }
-
-

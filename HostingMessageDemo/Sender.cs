@@ -16,7 +16,6 @@ public class Sender
     }
 
     //TODO: demo caching with IDistributedCache? 
-
     public async Task ProcessMessage(string type, IReceivedUMF umf)
     {
         switch (type) // Messages dispatcher
@@ -99,6 +98,7 @@ public class Sender
             _logger.LogError(e, "failed to receive single message");
         }
     }
+
     private async Task SendResponseStreamMessage()
     {
         var msg = _hydra.CreateUMF<SharedMessageBody>("queuer-svcs:/", "respond-stream", new()

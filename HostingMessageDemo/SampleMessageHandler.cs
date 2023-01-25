@@ -19,11 +19,13 @@ namespace HostingDemo
             SetValidateMode(config);
             _sender = sender;
         }
+
         private class Modes
         {
             public const string Sender = "sender";
             public const string Queuer = "queuer";
         }
+
         void SetValidateMode(HydraConfigObject config)
         {
             _mode = config?.Hydra?.ServiceType?.ToLower() ?? "unknown";
@@ -126,6 +128,7 @@ namespace HostingDemo
             }
 
         }
+
         private async Task HandleResponseStreamType(IInboundMessage msg, IHydra hydra)
         {
             IUMF<SharedMessageBody>? sm = msg.ReceivedUMF?.ToUMF<SharedMessageBody>();
