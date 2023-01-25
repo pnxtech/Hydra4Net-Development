@@ -42,21 +42,28 @@ namespace HostingDemo
 
         public override async Task OnMessageReceived(IInboundMessage msg, IHydra hydra)
         {
-            _logger.LogInformation($"Received message of type {msg.Type}");
-            if (_mode == Modes.Sender && msg.ReceivedUMF != null)
+            try
             {
-                await _sender.ProcessMessage(msg.Type, msg.ReceivedUMF);
+                _logger.LogInformation($"Received message of type {msg.Type}");
+                if (_mode == Modes.Sender && msg.ReceivedUMF != null)
+                {
+                    await _sender.ProcessMessage(msg.Type, msg.ReceivedUMF);
+                }
+                else if (_mode == Modes.Queuer)
+                {
+                    if (msg.Type == "respond")
+                    {
+                        await HandleRespondType(msg, hydra);
+                    }
+                    else if (msg.Type == "respond-stream")
+                    {
+                        await HandleResponseStreamType(msg, hydra);
+                    }
+                }
             }
-            else if (_mode == Modes.Queuer)
+            catch (Exception e)
             {
-                if (msg.Type == "respond")
-                {
-                    await HandleRespondType(msg, hydra);
-                }
-                else if (msg.Type == "respond-stream")
-                {
-                    await HandleResponseStreamType(msg, hydra);
-                }
+                _logger.LogError(e, "OnMessageReceived failed");
             }
         }
 

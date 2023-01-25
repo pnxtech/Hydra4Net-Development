@@ -55,7 +55,7 @@ namespace Hydra4NET
         #endregion
 
         #region Class variables 
-        private Task? _internalTask = null;
+        private Task? _presenceTask = null;
         //private readonly PeriodicTimer _timer;
         private int _secondsTick = 1;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
@@ -171,7 +171,8 @@ namespace Hydra4NET
                 if (_redis != null && _redis.IsConnected)
                 {
                     await RegisterService();
-                    _internalTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting
+                    ConfigurePresenceTask();
+                    ConfigureEventsChannel();
                     Initialized = true;
                 }
                 else
@@ -293,31 +294,37 @@ namespace Hydra4NET
             return jsonUMFMessage;
         }
 
-        public void Shutdown()
+        bool _disposed = false;
+
+        public async ValueTask ShutdownAsync(CancellationToken ct = default)
         {
+            if (_disposed)
+                return;
             try
             {
-                _redis?.Dispose();
-                _cts?.Cancel();
-                _cts?.Dispose();
+                if (_redis != null)
+                    await _redis.DisposeAsync();
+                try
+                {
+                    _cts.Cancel();
+                    await FlushMessageEvents(ct);
+                }
+                finally
+                {
+                    _cts.Dispose();
+                }
             }
-            catch { }
-        }
-
-        public void Dispose()
-        {
-            Shutdown();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (_redis != null)
+            finally
             {
-                await _redis.DisposeAsync();
-                _redis = null;
+                _disposed = true;
             }
-            Shutdown();
         }
+
+        public void Shutdown() => ShutdownAsync().GetAwaiter().GetResult();
+
+        public void Dispose() => Shutdown();
+
+        public ValueTask DisposeAsync() => ShutdownAsync();
 
         /** *********************************
         * [[ INTERNAL AND PRIVATE MEMBERS ]]
@@ -326,21 +333,29 @@ namespace Hydra4NET
 
         async Task HandleMessage(ChannelMessage channelMessage)
         {
-            string msg = (string?)channelMessage.Message ?? String.Empty;
-            if (_MessageHandler != null)
+            //ensure that errors on message do not break an application
+            try
             {
-                var umf = ReceivedUMF.Deserialize(msg);
-                var inMsg = new InboundMessage
+                string msg = (string?)channelMessage.Message ?? String.Empty;
+                if (_MessageHandler != null)
                 {
-                    ReceivedUMF = umf,
-                    Type = umf?.Typ ?? "",
-                    MessageJson = msg,
-                };
-                await _MessageHandler(inMsg);
-                if (umf != null)
-                {
-                    await _responseHandler.TryResolveResponses(inMsg);
+                    var umf = ReceivedUMF.Deserialize(msg);
+                    var inMsg = new InboundMessage
+                    {
+                        ReceivedUMF = umf,
+                        Type = umf?.Typ ?? "",
+                        MessageJson = msg,
+                    };
+                    await AddMessageChannelAction(_MessageHandler(inMsg));
+                    if (umf != null)
+                    {
+                        await _responseHandler.TryResolveResponses(inMsg);
+                    }
                 }
+            }
+            catch
+            {
+                //TODO: Add OnError handler and call it here?
             }
         }
 

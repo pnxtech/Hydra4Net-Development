@@ -64,7 +64,7 @@ namespace Hydra4NET
         Task<string> MarkQueueMessageAsync(string jsonUMFMessage, bool completed);
 
         /// <summary>
-        /// Registers the event handler for when a message is received
+        /// Registers the asynchronous event handler for when a message is received.
         /// </summary>
         /// <param name="handler"></param>
         void OnMessageHandler(Hydra.UMFMessageHandler handler);
@@ -206,5 +206,11 @@ namespace Hydra4NET
         /// </summary>
         void Shutdown();
 
+        /// <summary>
+        /// Called by DisposeAsync().  Cleans up Hydra resources. CancellationToken will cancel the flushing of incomplete message handler actions.
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        ValueTask ShutdownAsync(CancellationToken ct = default);
     }
 }
