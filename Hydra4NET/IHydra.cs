@@ -219,6 +219,6 @@ namespace Hydra4NET
         /// </summary>
         /// <param name="ct"></param>
         /// <returns></returns>
-        ValueTask ShutdownAsync(CancellationToken ct = default);
+        ValueTask ShutdownAsync(bool waitForFlush = true, CancellationToken ct = default);
     }
 }

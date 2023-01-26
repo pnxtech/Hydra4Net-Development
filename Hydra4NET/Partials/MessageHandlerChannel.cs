@@ -6,6 +6,8 @@ namespace Hydra4NET
 {
     public partial class Hydra
     {
+        //allows message hander events to be stored and flushed at process exit
+        //we could allow them to set max handler concurrency by making this bounded
         private Channel<Task> _eventsChannel = Channel.CreateUnbounded<Task>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
 
         private Task? _eventsChannelProcessTask;

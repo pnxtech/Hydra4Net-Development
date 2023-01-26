@@ -226,8 +226,7 @@ namespace Hydra4NET
             }
             if (instanceId != string.Empty && _redis != null)
             {
-                ISubscriber sub = _redis.GetSubscriber();
-                await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
+                await _redis.GetSubscriber().PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
                 return true;
             }
             return false;
@@ -243,8 +242,7 @@ namespace Hydra4NET
         {
             if (_redis != null)
             {
-                ISubscriber sub = _redis.GetSubscriber();
-                await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}", jsonUMFMessage);
+                await _redis.GetSubscriber().PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}", jsonUMFMessage);
             }
         }
 
@@ -307,23 +305,24 @@ namespace Hydra4NET
 
         bool _disposed = false;
 
-        public async ValueTask ShutdownAsync(CancellationToken ct = default)
+        public async ValueTask ShutdownAsync(bool waitForflush = true, CancellationToken ct = default)
         {
             if (_disposed)
                 return;
             try
             {
-                if (_redis != null)
-                    await _redis.DisposeAsync();
                 try
                 {
                     _cts.Cancel();
-                    await FlushMessageEvents(ct);
+                    if (waitForflush)
+                        await FlushMessageEvents(ct);
                 }
                 finally
                 {
                     _cts.Dispose();
                 }
+                if (_redis != null)
+                    await _redis.DisposeAsync();
             }
             finally
             {
@@ -342,31 +341,26 @@ namespace Hydra4NET
         * ***********************************
         */
 
-        async Task HandleMessage(ChannelMessage channelMessage)
+        async Task HandleMessage(RedisValue value)
         {
-            //ensure that errors on message do not break an application
-            try
+            //errors are caught by Redis library
+            string msg = (string?)value ?? String.Empty;
+            if (_MessageHandler != null)
             {
-                string msg = (string?)channelMessage.Message ?? String.Empty;
-                if (_MessageHandler != null)
+                var umf = ReceivedUMF.Deserialize(msg);
+                var inMsg = new InboundMessage
                 {
-                    var umf = ReceivedUMF.Deserialize(msg);
-                    var inMsg = new InboundMessage
-                    {
-                        ReceivedUMF = umf,
-                        Type = umf?.Typ ?? "",
-                        MessageJson = msg,
-                    };
-                    await AddMessageChannelAction(_MessageHandler(inMsg));
-                    if (umf != null)
-                    {
+                    ReceivedUMF = umf,
+                    Type = umf?.Typ ?? "",
+                    MessageJson = msg,
+                };
+                await AddMessageChannelAction(Task.Run(async () =>
+                {
+                    //ensure responses are resolved after message handler completes
+                    await _MessageHandler(inMsg);
+                    if (inMsg.ReceivedUMF != null)
                         await _responseHandler.TryResolveResponses(inMsg);
-                    }
-                }
-            }
-            catch
-            {
-                //TODO: Add OnError handler and call it here?
+                }));
             }
         }
 
@@ -388,8 +382,10 @@ namespace Hydra4NET
             }
             if (_redis != null)
             {
-                _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(HandleMessage);
-                _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(HandleMessage);
+                //use concurrent subscription
+                //should we allow users to choose concurrent or not?
+                await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}", (c, m) => Task.Run(() => HandleMessage(m)));
+                await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}:{InstanceID}", (c, m) => Task.Run(() => HandleMessage(m)));
             }
         }
 

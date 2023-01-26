@@ -27,7 +27,7 @@ namespace Hydra4Net.HostingExtensions
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Hydra shutting down");
-            await _hydra.ShutdownAsync(cancellationToken);
+            await _hydra.ShutdownAsync(ct: cancellationToken);
             await base.StopAsync(cancellationToken);
         }
 
