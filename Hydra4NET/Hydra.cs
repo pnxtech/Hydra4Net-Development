@@ -70,10 +70,11 @@ namespace Hydra4NET
         public string? Architecture { get; private set; }
         public string? NodeVersion { get; private set; }
         public string? InstanceID { get; private set; }
-        public bool Initialized { get; private set; }
+
+        private int _isInit = 0;
+        public bool IsInitialized => _isInit != 0;
 
         private IConnectionMultiplexer? _redis;
-
 
         #endregion // Class variables
 
@@ -121,7 +122,7 @@ namespace Hydra4NET
 
         public async Task InitAsync(HydraConfigObject? config = null)
         {
-            if (Initialized)
+            if (IsInitialized)
                 throw new HydraException("This instance has already been initialized", HydraException.ErrorType.InitializationError);
             if (config != null)
                 LoadConfig(config);
@@ -173,7 +174,7 @@ namespace Hydra4NET
                     await RegisterService();
                     ConfigurePresenceTask();
                     ConfigureEventsChannel();
-                    Initialized = true;
+                    SetInitializedTrue();
                 }
                 else
                 {
@@ -190,6 +191,14 @@ namespace Hydra4NET
             }
 
         }
+
+        private void SetInitializedTrue()
+        {
+            //switch Initialized = true in atomic manner;
+            Interlocked.Increment(ref _isInit);
+            _initTcs.SetResult(true);
+        }
+
         #endregion
 
         public Task SendMessageAsync(string to, string jsonUMFMessage)
@@ -382,13 +391,28 @@ namespace Hydra4NET
             }
         }
 
+        private TaskCompletionSource<bool> _initTcs = new TaskCompletionSource<bool>();
+        public async ValueTask WaitInitialized()
+        {
+            if (IsInitialized)
+                return;
+            await _initTcs.Task;
+        }
+
         public IConnectionMultiplexer GetRedisConnection()
         {
-            if (!Initialized)
+            if (!IsInitialized)
                 throw new HydraException("Hydra has not been initialized, so the connection is not available", HydraException.ErrorType.NotInitialized);
             if (_redis is null)
                 throw new HydraException("The connection is unavailable");
             return _redis;
+        }
+
+        public async ValueTask<IConnectionMultiplexer> GetRedisConnectionAsync()
+        {
+            if (!IsInitialized)
+                await WaitInitialized();
+            return GetRedisConnection();
         }
     }
 }

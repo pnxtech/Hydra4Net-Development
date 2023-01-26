@@ -1,4 +1,4 @@
-﻿namespace HostingDemo.Models;
+﻿namespace HostingMessageDemo.Models;
 /**
  * Message and Body
  * Define the Body classes for the Shared message

@@ -1,8 +1,8 @@
-﻿using HostingDemo.Models;
+﻿using HostingMessageDemo.Models;
 using Hydra4NET;
 using Microsoft.Extensions.Logging;
 
-namespace HostingDemo;
+namespace HostingMessageDemo;
 
 public class Sender
 {

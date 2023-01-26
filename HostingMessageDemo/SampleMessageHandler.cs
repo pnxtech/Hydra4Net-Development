@@ -1,9 +1,9 @@
-﻿using HostingDemo.Models;
+﻿using HostingMessageDemo.Models;
 using Hydra4Net.HostingExtensions;
 using Hydra4NET;
 using Microsoft.Extensions.Logging;
 
-namespace HostingDemo
+namespace HostingMessageDemo
 {
     internal class SampleMessageHandler : HydraEventsHandler
     {
