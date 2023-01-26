@@ -201,13 +201,13 @@ namespace Hydra4NET
 
         #endregion
 
-        public Task SendMessageAsync(string to, string jsonUMFMessage)
+        public Task<bool> SendMessageAsync(string to, string jsonUMFMessage)
             => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
-        public Task SendMessageAsync(IUMF message)
+        public Task<bool> SendMessageAsync(IUMF message)
             => SendMessage(message.GetRouteEntry(), message.Serialize());
 
-        private async Task SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
+        private async Task<bool> SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
         {
             string instanceId = string.Empty;
             if (parsedEntry.Instance != string.Empty)
@@ -228,7 +228,9 @@ namespace Hydra4NET
             {
                 ISubscriber sub = _redis.GetSubscriber();
                 await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
+                return true;
             }
+            return false;
         }
 
         public Task SendBroadcastMessageAsync(IUMF message)

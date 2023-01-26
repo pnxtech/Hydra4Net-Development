@@ -106,7 +106,7 @@ namespace Hydra4NET
         /// <param name="to"></param>
         /// <param name="jsonUMFMessage"></param>
         /// <returns></returns>
-        Task SendMessageAsync(string to, string jsonUMFMessage);
+        Task<bool> SendMessageAsync(string to, string jsonUMFMessage);
 
         /// <summary>
         /// Serializes and sends a message to a service instance
@@ -114,7 +114,7 @@ namespace Hydra4NET
         /// <typeparam name="T"></typeparam>
         /// <param name="message"></param>
         /// <returns></returns>
-        Task SendMessageAsync(IUMF message);
+        Task<bool> SendMessageAsync(IUMF message);
 
         /// <summary>
         /// Gets a UMF instance with default values set for sending

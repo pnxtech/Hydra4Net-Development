@@ -8,7 +8,8 @@ namespace Hydra4NET
         {
             Other,
             InitializationError,
-            NotInitialized
+            NotInitialized,
+            NoRecipientService
             //TODO: add more as required
         }
 
