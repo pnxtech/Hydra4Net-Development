@@ -6,7 +6,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>Hydra for .NET</Title>
     <SignAssembly>True</SignAssembly>
-    <Version>0.0.10</Version>
+    <Version>0.0.11</Version>
     <Description>Hydra for .NET is a library for building microservices.</Description>
     <Copyright>2022 Carlos Justiniano, Justin Couch, and Contributors</Copyright>
     <PackageTags>hydra microservice</PackageTags>

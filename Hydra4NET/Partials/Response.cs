@@ -21,7 +21,8 @@ namespace Hydra4NET
             _responseHandler.RegisterResponse(umf.Mid, expectedType, tcs);
             try
             {
-                await SendMessageAsync(umf);
+                if (!await SendMessageAsync(umf))
+                    throw new HydraException("Unable to send message, no recipients found", HydraException.ErrorType.NoRecipientService);
                 return await tcs.Task;
             }
             finally
@@ -44,12 +45,26 @@ namespace Hydra4NET
             };
         }
 
+        private async Task SendResponseMessage(bool broadCast, IUMF umf, IDisposable stream)
+        {
+            if (broadCast)
+            {
+                await SendBroadcastMessageAsync(umf);
+            }
+            else if (!await SendMessageAsync(umf))
+            {
+                stream.Dispose();
+                throw new HydraException("Unable to send message, no recipients found", HydraException.ErrorType.NoRecipientService);
+            }
+        }
+
         public async Task<IInboundMessageStream> GetUMFResponseStreamAsync(IUMF umf, bool broadCast = false)
         {
             if (umf is null)
                 throw new ArgumentNullException(nameof(umf));
+
             var stream = _responseHandler.RegisterResponseStream(umf.Mid);
-            await (broadCast ? SendBroadcastMessageAsync(umf) : SendMessageAsync(umf));
+            await SendResponseMessage(broadCast, umf, stream);
             return stream;
         }
 
@@ -59,7 +74,7 @@ namespace Hydra4NET
             if (umf is null)
                 throw new ArgumentNullException(nameof(umf));
             var stream = _responseHandler.RegisterResponseStream<TResBdy>(umf.Mid);
-            await (broadCast ? SendBroadcastMessageAsync(umf) : SendMessageAsync(umf));
+            await SendResponseMessage(broadCast, umf, stream);
             return stream;
         }
     }

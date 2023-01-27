@@ -109,6 +109,8 @@ namespace Hydra4NET
             return StandardSerializer.Serialize(presenceNodeEntry);
         }
 
+        private void ConfigurePresenceTask() => _presenceTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting
+
         private async Task UpdatePresence()
         {
             try

@@ -26,9 +26,9 @@ namespace Hydra4Net.HostingExtensions
         //called once at app shutdown
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
-            await base.StopAsync(cancellationToken);
             _logger.LogInformation("Hydra shutting down");
-            //since hydra implements IDisposable, shutdown() doesnt need to be called, it is called in dispose by the DI middleware
+            await _hydra.ShutdownAsync(ct: cancellationToken);
+            await base.StopAsync(cancellationToken);
         }
 
         async Task PerformHandlerAction(Func<IHydraEventsHandler, Task> action)

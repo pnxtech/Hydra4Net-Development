@@ -1,4 +1,4 @@
-﻿namespace HostingDemo.Models;
+﻿namespace HostingMessageDemo.Models;
 
 /**
  * Define Body class for the Command message

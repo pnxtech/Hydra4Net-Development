@@ -55,7 +55,7 @@ namespace Hydra4NET
         #endregion
 
         #region Class variables 
-        private Task? _internalTask = null;
+        private Task? _presenceTask = null;
         //private readonly PeriodicTimer _timer;
         private int _secondsTick = 1;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
@@ -70,10 +70,11 @@ namespace Hydra4NET
         public string? Architecture { get; private set; }
         public string? NodeVersion { get; private set; }
         public string? InstanceID { get; private set; }
-        public bool Initialized { get; private set; }
+
+        private int _isInit = 0;
+        public bool IsInitialized => _isInit != 0;
 
         private IConnectionMultiplexer? _redis;
-
 
         #endregion // Class variables
 
@@ -121,7 +122,7 @@ namespace Hydra4NET
 
         public async Task InitAsync(HydraConfigObject? config = null)
         {
-            if (Initialized)
+            if (IsInitialized)
                 throw new HydraException("This instance has already been initialized", HydraException.ErrorType.InitializationError);
             if (config != null)
                 LoadConfig(config);
@@ -171,8 +172,9 @@ namespace Hydra4NET
                 if (_redis != null && _redis.IsConnected)
                 {
                     await RegisterService();
-                    _internalTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting
-                    Initialized = true;
+                    ConfigurePresenceTask();
+                    ConfigureEventsChannel();
+                    SetInitializedTrue();
                 }
                 else
                 {
@@ -189,15 +191,23 @@ namespace Hydra4NET
             }
 
         }
+
+        private void SetInitializedTrue()
+        {
+            //switch Initialized = true in atomic manner;
+            Interlocked.Increment(ref _isInit);
+            _initTcs.SetResult(true);
+        }
+
         #endregion
 
-        public Task SendMessageAsync(string to, string jsonUMFMessage)
+        public Task<bool> SendMessageAsync(string to, string jsonUMFMessage)
             => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
-        public Task SendMessageAsync(IUMF message)
+        public Task<bool> SendMessageAsync(IUMF message)
             => SendMessage(message.GetRouteEntry(), message.Serialize());
 
-        private async Task SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
+        private async Task<bool> SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
         {
             string instanceId = string.Empty;
             if (parsedEntry.Instance != string.Empty)
@@ -216,9 +226,10 @@ namespace Hydra4NET
             }
             if (instanceId != string.Empty && _redis != null)
             {
-                ISubscriber sub = _redis.GetSubscriber();
-                await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
+                await _redis.GetSubscriber().PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
+                return true;
             }
+            return false;
         }
 
         public Task SendBroadcastMessageAsync(IUMF message)
@@ -231,8 +242,7 @@ namespace Hydra4NET
         {
             if (_redis != null)
             {
-                ISubscriber sub = _redis.GetSubscriber();
-                await sub.PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}", jsonUMFMessage);
+                await _redis.GetSubscriber().PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}", jsonUMFMessage);
             }
         }
 
@@ -293,40 +303,48 @@ namespace Hydra4NET
             return jsonUMFMessage;
         }
 
-        public void Shutdown()
+        bool _disposed = false;
+
+        public async ValueTask ShutdownAsync(bool waitForflush = true, CancellationToken ct = default)
         {
+            if (_disposed)
+                return;
             try
             {
-                _redis?.Dispose();
-                _cts?.Cancel();
-                _cts?.Dispose();
+                try
+                {
+                    _cts.Cancel();
+                    if (waitForflush)
+                        await FlushMessageEvents(ct);
+                }
+                finally
+                {
+                    _cts.Dispose();
+                }
+                if (_redis != null)
+                    await _redis.DisposeAsync();
             }
-            catch { }
-        }
-
-        public void Dispose()
-        {
-            Shutdown();
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (_redis != null)
+            finally
             {
-                await _redis.DisposeAsync();
-                _redis = null;
+                _disposed = true;
             }
-            Shutdown();
         }
+
+        public void Shutdown() => ShutdownAsync().GetAwaiter().GetResult();
+
+        public void Dispose() => Shutdown();
+
+        public ValueTask DisposeAsync() => ShutdownAsync();
 
         /** *********************************
         * [[ INTERNAL AND PRIVATE MEMBERS ]]
         * ***********************************
         */
 
-        async Task HandleMessage(ChannelMessage channelMessage)
+        async Task HandleMessage(RedisValue value)
         {
-            string msg = (string?)channelMessage.Message ?? String.Empty;
+            //errors are caught by Redis library
+            string msg = (string?)value ?? String.Empty;
             if (_MessageHandler != null)
             {
                 var umf = ReceivedUMF.Deserialize(msg);
@@ -336,11 +354,13 @@ namespace Hydra4NET
                     Type = umf?.Typ ?? "",
                     MessageJson = msg,
                 };
-                await _MessageHandler(inMsg);
-                if (umf != null)
+                await AddMessageChannelAction(Task.Run(async () =>
                 {
-                    await _responseHandler.TryResolveResponses(inMsg);
-                }
+                    //ensure responses are resolved after message handler completes
+                    await _MessageHandler(inMsg);
+                    if (inMsg.ReceivedUMF != null)
+                        await _responseHandler.TryResolveResponses(inMsg);
+                }));
             }
         }
 
@@ -362,18 +382,35 @@ namespace Hydra4NET
             }
             if (_redis != null)
             {
-                _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}").OnMessage(HandleMessage);
-                _redis.GetSubscriber().Subscribe($"{_mc_message_key}:{ServiceName}:{InstanceID}").OnMessage(HandleMessage);
+                //use concurrent subscription
+                //should we allow users to choose concurrent or not?
+                await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}", (c, m) => Task.Run(() => HandleMessage(m)));
+                await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}:{InstanceID}", (c, m) => Task.Run(() => HandleMessage(m)));
             }
+        }
+
+        private TaskCompletionSource<bool> _initTcs = new TaskCompletionSource<bool>();
+        public async ValueTask WaitInitialized()
+        {
+            if (IsInitialized)
+                return;
+            await _initTcs.Task;
         }
 
         public IConnectionMultiplexer GetRedisConnection()
         {
-            if (!Initialized)
+            if (!IsInitialized)
                 throw new HydraException("Hydra has not been initialized, so the connection is not available", HydraException.ErrorType.NotInitialized);
             if (_redis is null)
                 throw new HydraException("The connection is unavailable");
             return _redis;
+        }
+
+        public async ValueTask<IConnectionMultiplexer> GetRedisConnectionAsync()
+        {
+            if (!IsInitialized)
+                await WaitInitialized();
+            return GetRedisConnection();
         }
     }
 }

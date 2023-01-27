@@ -1,9 +1,9 @@
-﻿using HostingDemo.Models;
+﻿using HostingMessageDemo.Models;
 using Hydra4Net.HostingExtensions;
 using Hydra4NET;
 using Microsoft.Extensions.Logging;
 
-namespace HostingDemo
+namespace HostingMessageDemo
 {
     internal class SampleMessageHandler : HydraEventsHandler
     {
@@ -19,11 +19,13 @@ namespace HostingDemo
             SetValidateMode(config);
             _sender = sender;
         }
+
         private class Modes
         {
             public const string Sender = "sender";
             public const string Queuer = "queuer";
         }
+
         void SetValidateMode(HydraConfigObject config)
         {
             _mode = config?.Hydra?.ServiceType?.ToLower() ?? "unknown";
@@ -40,21 +42,28 @@ namespace HostingDemo
 
         public override async Task OnMessageReceived(IInboundMessage msg, IHydra hydra)
         {
-            _logger.LogInformation($"Received message of type {msg.Type}");
-            if (_mode == Modes.Sender && msg.ReceivedUMF != null)
+            try
             {
-                await _sender.ProcessMessage(msg.Type, msg.ReceivedUMF);
+                _logger.LogInformation($"Received message of type {msg.Type}");
+                if (_mode == Modes.Sender && msg.ReceivedUMF != null)
+                {
+                    await _sender.ProcessMessage(msg.Type, msg.ReceivedUMF);
+                }
+                else if (_mode == Modes.Queuer)
+                {
+                    if (msg.Type == "respond")
+                    {
+                        await HandleRespondType(msg, hydra);
+                    }
+                    else if (msg.Type == "respond-stream")
+                    {
+                        await HandleResponseStreamType(msg, hydra);
+                    }
+                }
             }
-            else if (_mode == Modes.Queuer)
+            catch (Exception e)
             {
-                if (msg.Type == "respond")
-                {
-                    await HandleRespondType(msg, hydra);
-                }
-                else if (msg.Type == "respond-stream")
-                {
-                    await HandleResponseStreamType(msg, hydra);
-                }
+                _logger.LogError(e, "OnMessageReceived failed");
             }
         }
 
@@ -126,6 +135,7 @@ namespace HostingDemo
             }
 
         }
+
         private async Task HandleResponseStreamType(IInboundMessage msg, IHydra hydra)
         {
             IUMF<SharedMessageBody>? sm = msg.ReceivedUMF?.ToUMF<SharedMessageBody>();
