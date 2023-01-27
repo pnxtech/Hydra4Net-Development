@@ -3,10 +3,15 @@
 ![logo](https://user-images.githubusercontent.com/387129/210153567-ffd66c5a-6e15-438a-a1a7-46a7f3ae1b0a.png)
 
 Hydra for .NET is a library module for building Dotnet microservices.
+Hydra4Net is an open source project offered under the [MIT license](./LICENSE).
 
-This extension library contains helper methods to easily get started with Hydra for ASP.Net core, or any applciation that user Microsoft.Extensions.Hosting.
+This extension library contains helper methods to easily get started with Hydra for ASP.Net core, or any application that uses Microsoft.Extensions.Hosting.
 
 This is an experimental release of an implementation of Hydra for .NET. Years ago (~7 now) Hydra for NodeJS was built to leverage the power of Redis for building microservices. The early Hydra (announced at EmpireNode 2016) offered features such as service discovery, distributed messaging, message load balancing, logging, presence, and health monitoring.
+
+Nuget packaged versions of Hydra4Net.HostingExtensions are available at: [Hydra4Net.HostingExtensions@NuGet](https://www.nuget.org/packages/Hydra4Net.HostingExtensions).
+
+---
 
 ## Caution and Housekeeping
 Hydra4Net is under active development and existing functionality may be dramatically changed (read: improved). Updates are offered for testing and feedback purposes. Please use with caution (i.e. not in production) and report any issues you may find.
@@ -15,7 +20,7 @@ More about Hydra and related open source projects can be found at: https://githu
 
 For an example of Hydra4Net messaging in action see the [HostingMessageDemo example](https://github.com/pnxtech/Hydra4Net-Development/tree/master/HostingMessageDemo)
 
-Nuget packaged versions of Hydra4Net are available at: [https://www.nuget.org/packages/Hydra4NET](https://www.nuget.org/packages/Hydra4NET)
+---
 
 ## Introduction
 Hydra4Net seeks to support the following features:
