@@ -1,7 +1,7 @@
 ﻿using Hydra4NET.Helpers;
 using System;
 
-/**
+/*
  * UMF - Universal Message Format
  * This module implements UMF based messages for standard interoperability 
  * between Hydra-based services, messaging and job queuing.

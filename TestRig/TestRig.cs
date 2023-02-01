@@ -1,6 +1,5 @@
 using Hydra4NET;
 using Hydra4NET.Helpers;
-using static Hydra4NET.Hydra;
 
 /**
  * TestRig
@@ -120,7 +119,8 @@ public class Tests
 
     public async Task GetPresence(string serviceName)
     {
-        List<PresenceNodeEntry>? entries = await _hydra.GetPresenceAsync(serviceName);
+        PresenceNodeEntryCollection? entries = await _hydra.GetPresenceAsync(serviceName);
+        entries.Shuffle();
         if (entries.Count == 0)
         {
         }

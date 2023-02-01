@@ -1,6 +1,5 @@
 ﻿using StackExchange.Redis;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,7 +31,7 @@ namespace Hydra4NET
         /// </summary>
         /// <param name="serviceName"></param>
         /// <returns></returns>
-        Task<List<Hydra.PresenceNodeEntry>> GetPresenceAsync(string serviceName);
+        Task<PresenceNodeEntryCollection> GetPresenceAsync(string serviceName);
 
         /// <summary>
         /// Retrieves a message from a service's queue
@@ -81,7 +80,7 @@ namespace Hydra4NET
         /// <summary>
         /// Serializes and adds a message to a services queue
         /// </summary>
-        /// <param name="umfHeader"></param>
+        /// <param name="message"></param>
         /// <returns></returns>
         Task QueueMessageAsync(IUMF message);
 
@@ -111,7 +110,6 @@ namespace Hydra4NET
         /// <summary>
         /// Serializes and sends a message to a service instance
         /// </summary>
-        /// <typeparam name="T"></typeparam>
         /// <param name="message"></param>
         /// <returns></returns>
         Task<bool> SendMessageAsync(IUMF message);
@@ -130,7 +128,6 @@ namespace Hydra4NET
         /// <summary>
         /// Creates a UMF instance with default values set for sending a response to another UMF
         /// </summary>
-        /// <typeparam name="TFromBdy"></typeparam>
         /// <typeparam name="TToBdy"></typeparam>
         /// <param name="umf"></param>
         /// <param name="type"></param>
@@ -217,6 +214,7 @@ namespace Hydra4NET
         /// <summary>
         /// Called by DisposeAsync().  Cleans up Hydra resources. CancellationToken will cancel the flushing of incomplete message handler actions.
         /// </summary>
+        /// <param name="waitForFlush"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
         ValueTask ShutdownAsync(bool waitForFlush = true, CancellationToken ct = default);
