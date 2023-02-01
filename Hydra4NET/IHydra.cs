@@ -189,10 +189,10 @@ namespace Hydra4NET
         IReceivedUMF? DeserializeReceviedUMF(string json);
 
         /// <summary>
-        /// A ValueTask that resolves when Hydra has been initialized.
+        /// A Task that resolves when Hydra has been initialized.
         /// </summary>
         /// <returns></returns>
-        ValueTask WaitInitialized();
+        Task WaitInitialized();
 
         /// <summary>
         /// Gets Hydra's redis ConnectionMultiplexer instance.  It is strongly recommended to use a different Database number than the one used for Hydra for non-Hydra activity.

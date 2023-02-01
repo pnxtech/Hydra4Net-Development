@@ -392,13 +392,9 @@ namespace Hydra4NET
             }
         }
 
-        private TaskCompletionSource<bool> _initTcs = new TaskCompletionSource<bool>();
-        public async ValueTask WaitInitialized()
-        {
-            if (IsInitialized)
-                return;
-            await _initTcs.Task;
-        }
+        private TaskCompletionSource<bool> _initTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task WaitInitialized() => _initTcs.Task;
 
         public IConnectionMultiplexer GetRedisConnection()
         {
