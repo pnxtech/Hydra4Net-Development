@@ -1,13 +1,12 @@
 ﻿using System.IO;
 using System.Text.Json;
 
-/**
- * Configuration
- * Hydra configuration loader
- */
 namespace Hydra4NET
 {
     //TODO: We can probably make "hydraRoot" the top level, instead of nesting it
+    /// <summary>
+    /// Configuration object for hydra instance
+    /// </summary>
     public class HydraConfigObject
     {
         public HydraRoot? Hydra { get; set; }
@@ -26,7 +25,7 @@ namespace Hydra4NET
         /// <summary>
         /// Loads hydra config from the pecified JSON file
         /// </summary>
-        /// <param name="configPath"></param>
+        /// <param name="configJsonPath"></param>
         /// <returns></returns>
         static public HydraConfigObject? Load(string configJsonPath)
         {

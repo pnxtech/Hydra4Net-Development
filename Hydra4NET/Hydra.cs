@@ -2,14 +2,13 @@
 using Hydra4NET.Internal;
 using StackExchange.Redis;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
-/**
+/*
  MIT License
  Copyright (c) 2022 Carlos Justiniano and contributors
  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -46,6 +45,7 @@ namespace Hydra4NET
         private const int _KEY_EXPIRATION_TTL = _ONE_SECOND * 3;
         private const string _redis_pre_key = "hydra:service";
         private const string _mc_message_key = "hydra:service:mc";
+        private const string _nodes_hash_key = "hydra:service:nodes";
         private const string _INFO = "info";
         private const string _DEBUG = "debug";
         private const string _WARN = "warn";
@@ -216,18 +216,17 @@ namespace Hydra4NET
             }
             else
             {
-                List<PresenceNodeEntry>? entries = await GetPresenceAsync(parsedEntry.ServiceName);
+                PresenceNodeEntryCollection entries = await GetPresenceAsync(parsedEntry.ServiceName);
                 if (entries != null && entries.Count > 0)
                 {
-                    // Always select first array entry because
-                    // GetPresence returns a randomized list
-                    instanceId = entries[0].InstanceID ?? "";
+                    // Pick random presence entry
+                    instanceId = entries.GetRandomEntry()?.InstanceID ?? "";
                 }
             }
             if (instanceId != string.Empty && _redis != null)
             {
                 await _redis.GetSubscriber().PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
-                return true;
+                return true; //TODO: if above returns > 0 and the redis instance is not a cluster, that indicates that message was sent.  Can we safely use this info?
             }
             return false;
         }
@@ -322,7 +321,11 @@ namespace Hydra4NET
                     _cts.Dispose();
                 }
                 if (_redis != null)
+                {
+                    //attempt to remove InstanceID from hash
+                    await GetDatabase().HashDeleteAsync(_nodes_hash_key, InstanceID);
                     await _redis.DisposeAsync();
+                }
             }
             finally
             {
@@ -389,13 +392,9 @@ namespace Hydra4NET
             }
         }
 
-        private TaskCompletionSource<bool> _initTcs = new TaskCompletionSource<bool>();
-        public async ValueTask WaitInitialized()
-        {
-            if (IsInitialized)
-                return;
-            await _initTcs.Task;
-        }
+        private TaskCompletionSource<bool> _initTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task WaitInitialized() => _initTcs.Task;
 
         public IConnectionMultiplexer GetRedisConnection()
         {

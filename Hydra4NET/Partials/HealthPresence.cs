@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-/**
+/*
  * Hydra Health and Presence module
  * This module implements a periodic timer which retrieves operating 
  * system process stats and metrics and periodically writes them to Redis.
@@ -138,7 +138,7 @@ namespace Hydra4NET
                 var db = GetDatabase();
                 await db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", InstanceID);
                 await db.KeyExpireAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
-                await db.HashSetAsync($"{_redis_pre_key}:nodes", InstanceID, BuildPresenceNodeEntry());
+                await db.HashSetAsync(_nodes_hash_key, InstanceID, BuildPresenceNodeEntry());
             }
         }
 
@@ -152,12 +152,13 @@ namespace Hydra4NET
             }
         }
 
-        public async Task<List<PresenceNodeEntry>> GetPresenceAsync(string serviceName)
+
+        public async Task<PresenceNodeEntryCollection> GetPresenceAsync(string serviceName)
         {
             List<string> instanceIds = new List<string>();
-            List<PresenceNodeEntry> serviceEntries = new List<PresenceNodeEntry>();
+            PresenceNodeEntryCollection serviceEntries = new PresenceNodeEntryCollection();
             var server = GetServer();
-            foreach (var key in server.Keys(pattern: $"*:{serviceName}:*:presence"))
+            await foreach (var key in server.KeysAsync(pattern: $"*:{serviceName}:*:presence"))
             {
                 string segments = key.ToString();
                 var segmentParts = segments.Split(":");
@@ -166,7 +167,7 @@ namespace Hydra4NET
             }
             foreach (var id in instanceIds)
             {
-                string? s = await GetDatabase().HashGetAsync($"{_redis_pre_key}:nodes", id);
+                string? s = await GetDatabase().HashGetAsync(_nodes_hash_key, id);
                 if (s != null)
                 {
                     PresenceNodeEntry? presenceNodeEntry = JsonSerializer.Deserialize<PresenceNodeEntry>(s, new JsonSerializerOptions()
@@ -180,16 +181,7 @@ namespace Hydra4NET
                     }
                 }
             }
-            // Shuffle array using Fisher-Yates shuffle
-            // Leverage tuples for a quick swap ;-)
-            Random rng = new Random();
-            int n = serviceEntries.Count;
-            while (n > 1)
-            {
-                n--;
-                int k = rng.Next(n + 1);
-                (serviceEntries[n], serviceEntries[k]) = (serviceEntries[k], serviceEntries[n]);
-            }
+
             return serviceEntries;
         }
 
