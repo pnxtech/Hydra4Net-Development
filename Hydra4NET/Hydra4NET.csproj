@@ -6,7 +6,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>Hydra for .NET</Title>
     <SignAssembly>True</SignAssembly>
-    <Version>0.0.11</Version>
+    <Version>0.0.12</Version>
     <Description>Hydra for .NET is a library for building microservices.</Description>
     <Copyright>2022 Carlos Justiniano, Justin Couch, and Contributors</Copyright>
     <PackageTags>hydra microservice</PackageTags>
@@ -15,10 +15,11 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageIcon>Hydra4Net-icon.png</PackageIcon>
-    
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
