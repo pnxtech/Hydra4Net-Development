@@ -91,6 +91,8 @@ namespace Hydra4NET
 
         void LoadConfig(HydraConfigObject config)
         {
+            if (config is null)
+                throw new ArgumentNullException("config", "HydraConfigObject cannot be null");
             _config = config;
             ServiceName = _config?.Hydra?.ServiceName;
             ServiceDescription = _config?.Hydra?.ServiceDescription;
