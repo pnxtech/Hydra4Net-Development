@@ -207,6 +207,12 @@ namespace Hydra4NET
         ValueTask<IConnectionMultiplexer> GetRedisConnectionAsync();
 
         /// <summary>
+        /// Gets the Redis conenction settings used to configure Hydra
+        /// </summary>
+        /// <returns></returns>
+        IRedisConfig GetRedisConfig();
+
+        /// <summary>
         /// Called by Dispose(). Cleans up resources associated with this instance.
         /// </summary>
         void Shutdown();

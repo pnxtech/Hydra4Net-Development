@@ -108,16 +108,17 @@ namespace Hydra4NET
         {
             if (_redis == null || _config == null)
                 throw new HydraException("Hydra has not been initialized, cannot retrieve a Database instance", HydraException.ErrorType.NotInitialized);
-            return _redis.GetDatabase(_config.Hydra?.Redis?.Db ?? 0);
+            return _redis.GetDatabase(GetRedisConfig().Db);
         }
 
         #region Initialization
 
         public IServer GetServer()
         {
-            if (_redis == null || _config == null)
+            if (_redis == null)
                 throw new HydraException("Hydra has not been initialized, cannot retrieve a Server instance", HydraException.ErrorType.NotInitialized);
-            return _redis.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
+            var config = GetRedisConfig();
+            return _redis.GetServer($"{config.Host}:{config.Port}");
         }
 
         public async Task InitAsync(HydraConfigObject? config = null)
@@ -410,6 +411,13 @@ namespace Hydra4NET
             if (!IsInitialized)
                 await WaitInitialized();
             return GetRedisConnection();
+        }
+
+        public IRedisConfig GetRedisConfig()
+        {
+            if (_config?.Hydra?.Redis is null)
+                throw new NullReferenceException("Redis configuration is null, check your configuration");
+            return _config.Hydra.Redis;
         }
     }
 }

@@ -61,7 +61,7 @@ namespace Hydra4NET
         public bool OnlyLogLocally { get; set; }
     }
 
-    public class Redis
+    public class Redis : IRedisConfig
     {
         public string? Host { get; set; }
         public int Port { get; set; }

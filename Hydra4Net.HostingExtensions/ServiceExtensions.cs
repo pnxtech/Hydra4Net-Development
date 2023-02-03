@@ -22,8 +22,6 @@ namespace Hydra4Net.HostingExtensions
                 return hydra;
             }));
             services.AddHostedService<HydraBackgroundService>();
-            //TODO: make HydraConfigObject implement an interface with getters only
-            services.AddSingleton(config); // dangerous since HydraConfigObject is not immutable, but it only matters at init()
             services.AddSingleton<DefaultQueueProcessor>();
             //add default events handler if no messaging or events required
             services.AddSingleton<IHydraEventsHandler, HydraEventsHandler>();
