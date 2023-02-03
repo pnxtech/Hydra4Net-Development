@@ -4,9 +4,12 @@ using System.Threading.Tasks;
 
 namespace Hydra4Net.HostingExtensions
 {
-    public abstract class HydraEventsHandler : IHydraEventsHandler
+    public class HydraEventsHandler : IHydraEventsHandler
     {
-        public abstract Task OnMessageReceived(IInboundMessage msg, IHydra hydra);
+        public virtual Task OnMessageReceived(IInboundMessage msg, IHydra hydra)
+        {
+            return Task.CompletedTask;
+        }
 
         public virtual Task OnQueueMessageReceived(IInboundMessage msg, IHydra hydra)
         {

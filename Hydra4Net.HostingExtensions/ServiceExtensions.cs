@@ -25,6 +25,8 @@ namespace Hydra4Net.HostingExtensions
             //TODO: make HydraConfigObject implement an interface with getters only
             services.AddSingleton(config); // dangerous since HydraConfigObject is not immutable, but it only matters at init()
             services.AddSingleton<DefaultQueueProcessor>();
+            //add default events handler if no messaging or events required
+            services.AddSingleton<IHydraEventsHandler, HydraEventsHandler>();
             return services;
         }
 
@@ -37,7 +39,7 @@ namespace Hydra4Net.HostingExtensions
         /// <returns></returns>
         public static IServiceCollection AddHydraEventHandler<THandler>(this IServiceCollection services, ServiceLifetime lifetime = ServiceLifetime.Singleton) where THandler : class, IHydraEventsHandler
         {
-            services.Add(new ServiceDescriptor(typeof(IHydraEventsHandler), typeof(THandler), lifetime));
+            services.Replace(new ServiceDescriptor(typeof(IHydraEventsHandler), typeof(THandler), lifetime));
             return services;
         }
 
