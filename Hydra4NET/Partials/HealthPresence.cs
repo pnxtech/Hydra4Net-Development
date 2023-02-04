@@ -190,7 +190,8 @@ namespace Hydra4NET
 
         public async Task<PresenceNodeEntryCollection> GetServiceNodesAsync()
         {
-            var timeNow = (int)(DateTime.Now.ToUniversalTime().Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+            var time1970 = new DateTime(1970, 1, 1);
+            var timeNow = (int)(DateTime.Now.ToUniversalTime().Subtract(time1970)).TotalSeconds;
             PresenceNodeEntryCollection serviceEntries = new PresenceNodeEntryCollection();
             var db = GetDatabase();
             HashEntry[] list = await db.HashGetAllAsync($"{_redis_pre_key}:nodes");
@@ -204,7 +205,7 @@ namespace Hydra4NET
                 if (presenceNodeEntry != null)
                 {
                     var date = DateTime.Parse(presenceNodeEntry.UpdatedOn, null, System.Globalization.DateTimeStyles.RoundtripKind);
-                    var unixTimestamp = (int)(date.ToUniversalTime().Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+                    var unixTimestamp = (int)(date.ToUniversalTime().Subtract(time1970)).TotalSeconds;
                     presenceNodeEntry.Elapsed = timeNow - unixTimestamp;
                     serviceEntries.Add(presenceNodeEntry);
                 }
