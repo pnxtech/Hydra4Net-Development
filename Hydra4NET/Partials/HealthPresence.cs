@@ -1,4 +1,5 @@
 ﻿using Hydra4NET.Helpers;
+using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -58,6 +59,7 @@ namespace Hydra4NET
             public string? Port { get; set; }
             public string? HostName { get; set; }
             public string? UpdatedOn { get; set; }
+            public int Elapsed { get; set; }
         }
         #endregion // Entry classes
 
@@ -104,7 +106,8 @@ namespace Hydra4NET
                 Ip = ServiceIP,
                 Port = ServicePort,
                 HostName = HostName,
-                UpdatedOn = Iso8601.GetTimestamp()
+                UpdatedOn = Iso8601.GetTimestamp(),
+                Elapsed = 0
             };
             return StandardSerializer.Serialize(presenceNodeEntry);
         }
@@ -182,6 +185,30 @@ namespace Hydra4NET
                 }
             }
 
+            return serviceEntries;
+        }
+
+        public async Task<PresenceNodeEntryCollection> GetServiceNodesAsync()
+        {
+            var timeNow = (int)(DateTime.Now.ToUniversalTime().Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+            PresenceNodeEntryCollection serviceEntries = new PresenceNodeEntryCollection();
+            var db = GetDatabase();
+            HashEntry[] list = await db.HashGetAllAsync($"{_redis_pre_key}:nodes");
+            foreach (var entry in list)
+            {
+                PresenceNodeEntry? presenceNodeEntry = JsonSerializer.Deserialize<PresenceNodeEntry>(entry.Value, new JsonSerializerOptions()
+                {
+                    PropertyNameCaseInsensitive = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+                if (presenceNodeEntry != null)
+                {
+                    var date = DateTime.Parse(presenceNodeEntry.UpdatedOn, null, System.Globalization.DateTimeStyles.RoundtripKind);
+                    var unixTimestamp = (int)(date.ToUniversalTime().Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+                    presenceNodeEntry.Elapsed = timeNow - unixTimestamp;
+                    serviceEntries.Add(presenceNodeEntry);
+                }
+            }
             return serviceEntries;
         }
 
