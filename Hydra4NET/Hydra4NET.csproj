@@ -6,7 +6,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>Hydra for .NET</Title>
     <SignAssembly>True</SignAssembly>
-    <Version>0.0.12</Version>
+    <Version>0.0.13</Version>
     <Description>Hydra for .NET is a library for building microservices.</Description>
     <Copyright>2022 Carlos Justiniano, Justin Couch, and Contributors</Copyright>
     <PackageTags>hydra microservice</PackageTags>
@@ -26,7 +26,7 @@
     <PackageReference Include="StackExchange.Redis" Version="2.6.86" />
     <PackageReference Include="System.Collections.Concurrent" Version="4.0.12" />
     <PackageReference Include="System.Text.Json" Version="4.6.0" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>

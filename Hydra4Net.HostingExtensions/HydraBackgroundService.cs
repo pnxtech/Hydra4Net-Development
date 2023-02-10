@@ -43,11 +43,12 @@ namespace Hydra4Net.HostingExtensions
             try
             {
                 _hydra.OnMessageHandler((msg) => PerformHandlerAction(e => e.OnMessageReceived(msg, _hydra)));
+                _hydra.OnInternalErrorHandler((ex) => PerformHandlerAction(e => e.OnInternalError(_hydra, ex)));
                 await PerformHandlerAction(e => e.BeforeInit(_hydra));
                 await _hydra.InitAsync();
                 _queue.Init(stoppingToken);
                 _queue.OnDequeueError(e => PerformHandlerAction(h => h.OnDequeueError(_hydra, e)));
-                _logger.LogInformation($"Hydra {_hydra.ServiceName} ({_hydra.InstanceID}) listening on {_hydra.ServiceIP}");
+                _logger.LogInformation($"Hydra {_hydra.ServiceName} ({_hydra.InstanceID}) connected to {_hydra.GetRedisConfig().GetRedisHost()} and listening on {_hydra.ServiceIP}");
             }
             catch (Exception e)
             {

@@ -10,14 +10,13 @@ namespace HostingMessageDemo
         private ILogger<SampleMessageHandler> _logger;
 
         private string _mode = "";
-        private Sender _sender;
+        private readonly Sender _sender;
 
-        public SampleMessageHandler(ILogger<SampleMessageHandler> logger, HydraConfigObject config, Sender sender)
+        public SampleMessageHandler(ILogger<SampleMessageHandler> logger, Sender sender, IHydra hydra)
         {
             _logger = logger;
-            //add to appsettings.json file or env
-            SetValidateMode(config);
             _sender = sender;
+            SetValidateMode(hydra);
         }
 
         private class Modes
@@ -26,9 +25,9 @@ namespace HostingMessageDemo
             public const string Queuer = "queuer";
         }
 
-        void SetValidateMode(HydraConfigObject config)
+        void SetValidateMode(IHydra hydra)
         {
-            _mode = config?.Hydra?.ServiceType?.ToLower() ?? "unknown";
+            _mode = hydra?.ServiceType?.ToLower() ?? "unknown";
             switch (_mode)
             {
                 case Modes.Sender:

@@ -82,6 +82,9 @@ namespace Hydra4NET
         #region Message delegate
         public delegate Task UMFMessageHandler(IInboundMessage msg);
         private UMFMessageHandler? _MessageHandler = null;
+
+        public delegate Task InternalErrorHandler(Exception exception);
+        private InternalErrorHandler? _ErrorHandler;
         #endregion // Message delegate
 
         public Hydra(HydraConfigObject config)
@@ -91,12 +94,14 @@ namespace Hydra4NET
 
         void LoadConfig(HydraConfigObject config)
         {
+            if (config is null)
+                throw new ArgumentNullException("config", "HydraConfigObject cannot be null");
             _config = config;
-            ServiceName = _config?.Hydra?.ServiceName;
-            ServiceDescription = _config?.Hydra?.ServiceDescription;
-            ServiceType = _config?.Hydra?.ServiceType;
-            ServicePort = _config?.Hydra?.ServicePort.ToString() ?? "";
-            ServiceIP = _config?.Hydra?.ServiceIP;
+            ServiceName = _config.ServiceName;
+            ServiceDescription = _config.ServiceDescription;
+            ServiceType = _config.ServiceType;
+            ServicePort = _config.ServicePort.ToString() ?? "";
+            ServiceIP = _config.ServiceIP;
         }
 
         /// <summary>
@@ -108,16 +113,16 @@ namespace Hydra4NET
         {
             if (_redis == null || _config == null)
                 throw new HydraException("Hydra has not been initialized, cannot retrieve a Database instance", HydraException.ErrorType.NotInitialized);
-            return _redis.GetDatabase(_config.Hydra?.Redis?.Db ?? 0);
+            return _redis.GetDatabase(GetRedisConfig().Db);
         }
 
         #region Initialization
 
         public IServer GetServer()
         {
-            if (_redis == null || _config == null)
+            if (_redis == null)
                 throw new HydraException("Hydra has not been initialized, cannot retrieve a Server instance", HydraException.ErrorType.NotInitialized);
-            return _redis.GetServer($"{_config?.Hydra?.Redis?.Host}:{_config?.Hydra?.Redis?.Port}");
+            return _redis.GetServer(GetRedisConfig().GetRedisHost());
         }
 
         public async Task InitAsync(HydraConfigObject? config = null)
@@ -247,10 +252,16 @@ namespace Hydra4NET
 
         public void OnMessageHandler(UMFMessageHandler handler)
         {
-            if (handler != null)
-            {
-                _MessageHandler = handler;
-            }
+            if (handler is null)
+                throw new ArgumentNullException("handler", "UMFMessageHandler cannot be null");
+            _MessageHandler = handler;
+        }
+
+        public void OnInternalErrorHandler(InternalErrorHandler handler)
+        {
+            if (handler is null)
+                throw new ArgumentNullException("handler", "InternalErrorHandler cannot be null");
+            _ErrorHandler = handler;
         }
 
         private async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
@@ -346,10 +357,12 @@ namespace Hydra4NET
 
         async Task HandleMessage(RedisValue value)
         {
-            //errors are caught by Redis library
-            string msg = (string?)value ?? String.Empty;
-            if (_MessageHandler != null)
+            if (_MessageHandler is null)
+                return;
+            try
             {
+                string msg = (string?)value ?? String.Empty;
+
                 var umf = ReceivedUMF.Deserialize(msg);
                 var inMsg = new InboundMessage
                 {
@@ -365,31 +378,32 @@ namespace Hydra4NET
                         await _responseHandler.TryResolveResponses(inMsg);
                 }));
             }
+            catch (Exception e)
+            {
+                if (_ErrorHandler != null)
+                    await _ErrorHandler(e);
+            }
         }
 
         private ResponseHandler _responseHandler = new ResponseHandler();
 
         private async Task RegisterService()
         {
-            if (_redis != null)
+            if (_redis == null)
+                return;
+            var db = GetDatabase();
+            var key = $"{_redis_pre_key}:{ServiceName}:service";
+            await db.StringSetAsync(key, StandardSerializer.Serialize(new RegistrationEntry
             {
-                var db = GetDatabase();
-                var key = $"{_redis_pre_key}:{ServiceName}:service";
-                await db.StringSetAsync(key, StandardSerializer.Serialize(new RegistrationEntry
-                {
-                    ServiceName = ServiceName,
-                    Type = ServiceType,
-                    RegisteredOn = Iso8601.GetTimestamp()
-                }));
-                await db.KeyExpireAsync(key, TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
-            }
-            if (_redis != null)
-            {
-                //use concurrent subscription
-                //should we allow users to choose concurrent or not?
-                await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}", (c, m) => Task.Run(() => HandleMessage(m)));
-                await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}:{InstanceID}", (c, m) => Task.Run(() => HandleMessage(m)));
-            }
+                ServiceName = ServiceName,
+                Type = ServiceType,
+                RegisteredOn = Iso8601.GetTimestamp()
+            }));
+            await db.KeyExpireAsync(key, TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
+
+            //use concurrent subscription
+            await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}", (c, m) => Task.Run(() => HandleMessage(m)));
+            await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}:{InstanceID}", (c, m) => Task.Run(() => HandleMessage(m)));
         }
 
         private TaskCompletionSource<bool> _initTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -410,6 +424,13 @@ namespace Hydra4NET
             if (!IsInitialized)
                 await WaitInitialized();
             return GetRedisConnection();
+        }
+
+        public IRedisConfig GetRedisConfig()
+        {
+            if (_config?.Redis is null)
+                throw new NullReferenceException("Redis configuration is null, check your configuration");
+            return _config.Redis;
         }
     }
 }

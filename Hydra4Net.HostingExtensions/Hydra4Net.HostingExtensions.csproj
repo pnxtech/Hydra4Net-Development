@@ -6,7 +6,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>Microsoft.Hosting.Extensions Helpers for Hydra for .NET</Title>
     <SignAssembly>True</SignAssembly>
-    <Version>0.0.12</Version>
+    <Version>0.0.13</Version>
     <Description>Helper extensions for Microsoft.Hosting.Extensions and Hydra for .NET</Description>
     <Copyright>2022 Carlos Justiniano, Justin Couch, and Contributors</Copyright>
     <PackageTags>hydra microservice</PackageTags>

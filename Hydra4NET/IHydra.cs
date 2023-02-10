@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using static Hydra4NET.Hydra;
 
 namespace Hydra4NET
 {
@@ -69,6 +70,12 @@ namespace Hydra4NET
         /// </summary>
         /// <param name="handler"></param>
         void OnMessageHandler(Hydra.UMFMessageHandler handler);
+
+        /// <summary>
+        /// Registers an asynchronous event handler for when an error occurs during message retrieval
+        /// </summary>
+        /// <param name="handler"></param>
+        void OnInternalErrorHandler(InternalErrorHandler handler);
 
         /// <summary>
         /// Adds a message to a services queue
@@ -205,6 +212,12 @@ namespace Hydra4NET
         /// </summary>
         /// <returns></returns>
         ValueTask<IConnectionMultiplexer> GetRedisConnectionAsync();
+
+        /// <summary>
+        /// Gets the Redis conenction settings used to configure Hydra
+        /// </summary>
+        /// <returns></returns>
+        IRedisConfig GetRedisConfig();
 
         /// <summary>
         /// Called by Dispose(). Cleans up resources associated with this instance.

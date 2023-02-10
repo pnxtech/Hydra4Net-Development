@@ -49,21 +49,19 @@ Hydra4Net has built-in support for UMF via its `UMF<TBdy>` classes.
 
 ```json
 {
-  "HydraConfig" : {
     "Hydra": {
-      "ServiceName": "testrig-svcs",
-      "ServiceIP": "",
-      "ServicePort": 12018,
-      "ServiceType": "test",
-      "ServiceDescription": "Dotnet-based experimental service",
-      "Redis": {
+        "ServiceName": "testrig-svcs",
+        "ServiceIP": "",
+        "ServicePort": 12018,
+        "ServiceType": "test",
+        "ServiceDescription": "Dotnet-based experimental service",
+        "Redis": {
         "Host": "redis",
         "Port": 6379,
         "Db": 0,
         "Options": "abortConnect=false,connectRetry=3,connectTimeout=5000"
-      }
+        }
     }
-  }
 }
 ```
 
@@ -78,7 +76,7 @@ Replace the following values above:
 - Update the `hydra.redis` branch with the `host`, `port` and `db` of the Redis server you will use for Hydra4Net. Note the hostname can be an IP address or DNS name.  Also you can use a mask pattern to allow Hydra4Net to select from a range of IPs.  To use that specify a pattern such as "10.0.0.*" to restrict IP selection.  Note, this is useful when containerizing your microservice.
 
 
-3. Add the following lines to the `IservicesCollection` configuration.  This will add the necessary services to DI.  Importantly, a singleton `IHydra` instance will be added which can be used throughout the application
+3. Add the following lines to the `IServicesCollection` configuration.  This will add the necessary services to DI.  Importantly, a singleton `IHydra` instance will be added which can be used throughout the application
 
 ```csharp
 using Hydra4NET.HostingExtensions;
@@ -87,11 +85,12 @@ using Hydra4NET.HostingExtensions;
 var config = Configuration.GetHydraConfig();          
 services
   .AddHydraServices(config)
+  //optional
   .AddHydraEventHandler<SampleMessageHandler>();
 ```
 
 
-4. Make sure to implement the `IHydraEventsHandler` interface and pass the implementation to `AddHydraEventHandler()` above.  You can also use the helper base class `HydraEventsHandler`, which only requires you to implement `OnMessageReceived`; you can optionally override the other methods.
+4. If you need to handle incoming messages, make sure to implement the `IHydraEventsHandler` interface and pass the implementation to `AddHydraEventHandler()` above.  You can also extend the helper base class `HydraEventsHandler`, which contains default overridable implementations of the interface.
 
 5. Use Hydra4Net to send and receive messages.
 The example below shows that a delegate will be called when messages are received. The delegate is passed the untyped/serialized message object, the message type, and the message body. The message object can then be cast to the desired concrete type based on the `type` parameter using the `Cast` method.
@@ -217,10 +216,10 @@ using (IInboundMessageStream<SharedMessageBody> resp = await _hydra.GetUMFRespon
 IUMF<SharedMessageBody> request ; //received request from Sender
 for (var i = 0; i < 5; i++)
 {
-  IUMF<SharedMessageBody> sharedMessage = hydra.CreateUMFResponse(sm!, "response-stream", new SharedMessageBody());
+  IUMF<SharedMessageBody> sharedMessage = hydra.CreateUMFResponse(sm, "response-stream", new SharedMessageBody());
   await hydra.SendMessageAsync(sharedMessage);
 }
-IUMF<SharedMessageBody> completeMsg = hydra.CreateUMFResponse(sm!, "response-stream-complete", new SharedMessageBody());
+IUMF<SharedMessageBody> completeMsg = hydra.CreateUMFResponse(sm, "response-stream-complete", new SharedMessageBody());
 await hydra.SendMessageAsync(completeMsg);
 ```
 
