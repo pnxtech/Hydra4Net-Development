@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Hydra4NET.Helpers;
+using System;
 using System.IO;
-using System.Text.Json;
 
 namespace Hydra4NET
 {
@@ -31,7 +31,7 @@ namespace Hydra4NET
         }
 
         /// <summary>
-        /// Loads hydra config from the pecified JSON file
+        /// Loads hydra config from the specified JSON file
         /// </summary>
         /// <param name="configJsonPath"></param>
         /// <returns></returns>
@@ -41,11 +41,7 @@ namespace Hydra4NET
                 throw new ArgumentNullException(nameof(configJsonPath), "Json path cannot be null or empty");
             if (!File.Exists(configJsonPath))
                 throw new FileNotFoundException("Json path not found");
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-            return JsonSerializer.Deserialize<ConventionJsonWrapper>(File.ReadAllText(configJsonPath), options)?.Hydra;
+            return StandardSerializer.Deserialize<ConventionJsonWrapper>(File.ReadAllText(configJsonPath))?.Hydra;
         }
     }
 
@@ -67,5 +63,4 @@ namespace Hydra4NET
         public bool LogToConsole { get; set; }
         public bool OnlyLogLocally { get; set; }
     }
-
 }

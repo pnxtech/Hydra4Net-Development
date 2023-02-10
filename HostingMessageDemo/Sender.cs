@@ -1,6 +1,7 @@
 ﻿using HostingMessageDemo.Models;
 using Hydra4NET;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace HostingMessageDemo;
 
@@ -29,7 +30,7 @@ public class Sender
         }
     }
 
-    private async Task ProcessCommandMessage(IReceivedUMF umf)
+    private Task ProcessCommandMessage(IReceivedUMF umf)
     {
         IUMF<CommandMessageBody> msg = umf.ToUMF<CommandMessageBody>();
         if (msg != null)
@@ -38,18 +39,19 @@ public class Sender
             {
                 case "start":
                     _logger.LogInformation("Sender: queuing message for Queuer");
-                    await QueueMessageForQueuer();
-                    break;
+                    return QueueMessageForQueuer();
                 case "start-respond":
                     _logger.LogInformation("Sender: sending message for response");
-                    await SendResponseMessage();
-                    break;
+                    return SendResponseMessage();
                 case "start-respond-stream":
-                    _logger.LogInformation("Sender: sending message for response");
-                    await SendResponseStreamMessage();
-                    break;
+                    _logger.LogInformation("Sender: sending message for stream response");
+                    return SendResponseStreamMessage();
+                case "start-get-nodes":
+                    _logger.LogInformation("Sender: retrieving service nodes");
+                    return GetServiceNodes();
             }
         }
+        return Task.CompletedTask;
     }
 
     private void ProcessCompleteMessage(IReceivedUMF umf)
@@ -121,5 +123,11 @@ public class Sender
                 }
             }
         }
+    }
+
+    private async Task GetServiceNodes()
+    {
+        var nodes = await _hydra.GetServiceNodesAsync();
+        _logger.LogInformation($"Current service nodes: " + JsonSerializer.Serialize(nodes));
     }
 }

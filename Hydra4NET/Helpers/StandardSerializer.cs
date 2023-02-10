@@ -27,14 +27,5 @@ namespace Hydra4NET.Helpers
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             });
         }
-
-        static internal string SerializeForCache<T>(T item)
-        {
-            return JsonSerializer.Serialize(item, new JsonSerializerOptions()
-            {
-                IgnoreNullValues = true,
-                IgnoreReadOnlyProperties = true,
-            });
-        }
     }
 }

@@ -35,6 +35,12 @@ namespace Hydra4NET
         Task<PresenceNodeEntryCollection> GetPresenceAsync(string serviceName);
 
         /// <summary>
+        /// Gets a list of presence entries currently in hydra's service hash
+        /// </summary>
+        /// <returns></returns>
+        Task<PresenceNodeEntryCollection> GetServiceNodesAsync();
+
+        /// <summary>
         /// Retrieves a message from a service's queue
         /// </summary>
         /// <param name="serviceName"></param>

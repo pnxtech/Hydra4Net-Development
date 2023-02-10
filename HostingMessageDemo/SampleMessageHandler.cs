@@ -142,6 +142,7 @@ namespace HostingMessageDemo
             if (sm != null)
             {
                 int? Id = sm?.Bdy?.Id;
+                //Note that these messages are not guaranteed to be received in order by the Sender
                 for (var i = 0; i < 5; i++)
                 {
                     IUMF<SharedMessageBody> sharedMessage = hydra.CreateUMFResponse(sm!, "response-stream", new SharedMessageBody()
