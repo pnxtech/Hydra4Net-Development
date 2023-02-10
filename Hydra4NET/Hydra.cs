@@ -82,6 +82,9 @@ namespace Hydra4NET
         #region Message delegate
         public delegate Task UMFMessageHandler(IInboundMessage msg);
         private UMFMessageHandler? _MessageHandler = null;
+
+        public delegate Task InternalErrorHandler(Exception exception);
+        private InternalErrorHandler? _ErrorHandler;
         #endregion // Message delegate
 
         public Hydra(HydraConfigObject config)
@@ -250,10 +253,16 @@ namespace Hydra4NET
 
         public void OnMessageHandler(UMFMessageHandler handler)
         {
-            if (handler != null)
-            {
-                _MessageHandler = handler;
-            }
+            if (handler is null)
+                throw new ArgumentNullException("handler", "UMFMessageHandler cannot be null");
+            _MessageHandler = handler;
+        }
+
+        public void OnInternalErrorHandler(InternalErrorHandler handler)
+        {
+            if (handler is null)
+                throw new ArgumentNullException("handler", "InternalErrorHandler cannot be null");
+            _ErrorHandler = handler;
         }
 
         private async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
@@ -349,10 +358,12 @@ namespace Hydra4NET
 
         async Task HandleMessage(RedisValue value)
         {
-            //errors are caught by Redis library
-            string msg = (string?)value ?? String.Empty;
-            if (_MessageHandler != null)
+            if (_MessageHandler is null)
+                return;
+            try
             {
+                string msg = (string?)value ?? String.Empty;
+
                 var umf = ReceivedUMF.Deserialize(msg);
                 var inMsg = new InboundMessage
                 {
@@ -368,31 +379,32 @@ namespace Hydra4NET
                         await _responseHandler.TryResolveResponses(inMsg);
                 }));
             }
+            catch (Exception e)
+            {
+                if (_ErrorHandler != null)
+                    await _ErrorHandler(e);
+            }
         }
 
         private ResponseHandler _responseHandler = new ResponseHandler();
 
         private async Task RegisterService()
         {
-            if (_redis != null)
+            if (_redis == null)
+                return;
+            var db = GetDatabase();
+            var key = $"{_redis_pre_key}:{ServiceName}:service";
+            await db.StringSetAsync(key, StandardSerializer.Serialize(new RegistrationEntry
             {
-                var db = GetDatabase();
-                var key = $"{_redis_pre_key}:{ServiceName}:service";
-                await db.StringSetAsync(key, StandardSerializer.Serialize(new RegistrationEntry
-                {
-                    ServiceName = ServiceName,
-                    Type = ServiceType,
-                    RegisteredOn = Iso8601.GetTimestamp()
-                }));
-                await db.KeyExpireAsync(key, TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
-            }
-            if (_redis != null)
-            {
-                //use concurrent subscription
-                //should we allow users to choose concurrent or not?
-                await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}", (c, m) => Task.Run(() => HandleMessage(m)));
-                await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}:{InstanceID}", (c, m) => Task.Run(() => HandleMessage(m)));
-            }
+                ServiceName = ServiceName,
+                Type = ServiceType,
+                RegisteredOn = Iso8601.GetTimestamp()
+            }));
+            await db.KeyExpireAsync(key, TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
+
+            //use concurrent subscription
+            await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}", (c, m) => Task.Run(() => HandleMessage(m)));
+            await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}:{InstanceID}", (c, m) => Task.Run(() => HandleMessage(m)));
         }
 
         private TaskCompletionSource<bool> _initTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);

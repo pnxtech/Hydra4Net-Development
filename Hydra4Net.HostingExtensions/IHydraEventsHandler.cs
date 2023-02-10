@@ -45,6 +45,8 @@ namespace Hydra4Net.HostingExtensions
         /// <returns></returns>
         Task OnDequeueError(IHydra hydra, Exception e);
 
+        Task OnInternalError(IHydra hydra, Exception e);
+
         /// <summary>
         /// Called on application shutdown
         /// </summary>

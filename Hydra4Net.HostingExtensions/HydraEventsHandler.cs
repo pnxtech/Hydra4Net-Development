@@ -34,5 +34,10 @@ namespace Hydra4Net.HostingExtensions
         {
             return Task.CompletedTask;
         }
+
+        public virtual Task OnInternalError(IHydra hydra, Exception e)
+        {
+            return Task.CompletedTask;
+        }
     }
 }

@@ -43,6 +43,7 @@ namespace Hydra4Net.HostingExtensions
             try
             {
                 _hydra.OnMessageHandler((msg) => PerformHandlerAction(e => e.OnMessageReceived(msg, _hydra)));
+                _hydra.OnInternalErrorHandler((ex) => PerformHandlerAction(e => e.OnInternalError(_hydra, ex)));
                 await PerformHandlerAction(e => e.BeforeInit(_hydra));
                 await _hydra.InitAsync();
                 _queue.Init(stoppingToken);
