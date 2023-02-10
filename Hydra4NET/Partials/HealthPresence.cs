@@ -20,7 +20,7 @@ namespace Hydra4NET
         {
             public string? ServiceName { get; set; }
             public string? Type { get; set; }
-            public string? RegisteredOn { get; set; }
+            public DateTime RegisteredOn { get; set; } = DateTime.UtcNow;
         }
 
         public class MemoryStatsEntry
@@ -32,11 +32,11 @@ namespace Hydra4NET
 
         public class HealthCheckEntry
         {
-            public string? UpdatedOn { get; set; }
+            public DateTime UpdatedOn { get; set; } = DateTime.UtcNow;
             public string? ServiceName { get; set; }
             public string? InstanceID { get; set; }
             public string? HostName { get; set; }
-            public string? SampledOn { get; set; }
+            public DateTime SampledOn { get; set; } = DateTime.UtcNow;
             public int ProcessID { get; set; }
             public string? Architecture { get; set; }
             public string? Platform { get; set; }
@@ -58,7 +58,7 @@ namespace Hydra4NET
             public string? Ip { get; set; }
             public string? Port { get; set; }
             public string? HostName { get; set; }
-            public string? UpdatedOn { get; set; }
+            public DateTime UpdatedOn { get; set; } = DateTime.UtcNow;
             public int Elapsed { get; set; }
         }
         #endregion // Entry classes
@@ -66,14 +66,11 @@ namespace Hydra4NET
         #region Presence and Health check handling
         private string BuildHealthCheckEntry()
         {
-            var timestamp = Iso8601.GetTimestamp();
             HealthCheckEntry healthCheckEntry = new HealthCheckEntry()
             {
-                UpdatedOn = timestamp,
                 ServiceName = ServiceName,
                 InstanceID = InstanceID,
                 HostName = HostName,
-                SampledOn = timestamp,
                 ProcessID = ProcessID,
                 Architecture = Architecture,
                 Platform = "Dotnet",
@@ -106,7 +103,6 @@ namespace Hydra4NET
                 Ip = ServiceIP,
                 Port = ServicePort,
                 HostName = HostName,
-                UpdatedOn = Iso8601.GetTimestamp(),
                 Elapsed = 0
             };
             return StandardSerializer.Serialize(presenceNodeEntry);
@@ -205,8 +201,7 @@ namespace Hydra4NET
                 });
                 if (presenceNodeEntry != null)
                 {
-                    var date = DateTime.Parse(presenceNodeEntry.UpdatedOn, null, System.Globalization.DateTimeStyles.RoundtripKind);
-                    var unixTimestamp = GetUtcTimeStamp(date);
+                    var unixTimestamp = GetUtcTimeStamp(presenceNodeEntry.UpdatedOn);
                     presenceNodeEntry.Elapsed = timeNow - unixTimestamp;
                     serviceEntries.Add(presenceNodeEntry);
                 }
