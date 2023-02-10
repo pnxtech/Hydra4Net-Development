@@ -12,10 +12,7 @@ namespace Hydra4NET
         {
             if (string.IsNullOrWhiteSpace(Host))
                 throw new ArgumentNullException(nameof(Host), "Host cannot be null or empty");
-            var host = Host;
-            if (Port.HasValue)
-                host += $":{Port}";
-            return host;
+            return $"{Host}:{Port ?? 6379}";
         }
     }
 }
