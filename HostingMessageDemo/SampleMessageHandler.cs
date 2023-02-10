@@ -151,6 +151,7 @@ namespace HostingMessageDemo
                     });
                     await hydra.SendMessageAsync(sharedMessage);
                     _logger.LogInformation($"Queuer: sent response stream message back to sender");
+                    await Task.Delay(500);
                 }
                 IUMF<SharedMessageBody> completeMsg = hydra.CreateUMFResponse(sm!, "response-stream-complete", new SharedMessageBody()
                 {

@@ -397,7 +397,6 @@ namespace Hydra4NET
             {
                 ServiceName = ServiceName,
                 Type = ServiceType,
-                RegisteredOn = Iso8601.GetTimestamp()
             }));
             await db.KeyExpireAsync(key, TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
 
