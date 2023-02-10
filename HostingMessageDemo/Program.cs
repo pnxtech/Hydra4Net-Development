@@ -12,7 +12,7 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureServices((cont, services) =>
     {
-        var config = cont.Configuration.GetSection("HydraConfig").GetHydraConfig();
+        var config = cont.Configuration.GetSection("Hydra").GetHydraConfig();
         //(also works due to additional helper) var config = cont.Configuration.GetHydraConfig();
         services
             .AddHydra(config)

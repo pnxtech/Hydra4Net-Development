@@ -14,7 +14,7 @@ services
 .AddHydraServices(config)
 .AddHydraEventHandler<SampleMessageHandler>();
 ```
-The `AddHydraEventHandler` method requires an implementation of the `IHydraEventsHandler` interface.  The abstract class `HydraEventsHandler` implements this for you, with the exception of the `OnMessageReceived` and `OnQueueMessageReceived` methods.
+The `AddHydraEventHandler` method requires an implementation of the `IHydraEventsHandler` interface.  The helper class `HydraEventsHandler` implements this for you with default empty handlers.
 
 The library also handles Hydra queue management for you.
 
@@ -62,10 +62,6 @@ The `queuer` retrieves the message from its message queue, then processes the me
     }
 }
 ```
-
-
-
-
 
 ---
 

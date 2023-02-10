@@ -1,23 +1,29 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Text.Json;
 
 namespace Hydra4NET
 {
-    //TODO: We can probably make "hydraRoot" the top level, instead of nesting it
     /// <summary>
     /// Configuration object for hydra instance
     /// </summary>
     public class HydraConfigObject
     {
-        public HydraRoot? Hydra { get; set; }
+        public string? ServiceName { get; set; }
+        public string? ServiceIP { get; set; }
+        public int? ServicePort { get; set; }
+        public string? ServiceType { get; set; }
+        public string? ServiceDescription { get; set; }
+        public Plugins? Plugins { get; set; }
+        public Redis? Redis { get; set; }
+
         public string GetRedisConnectionString()
         {
-            var redis = Hydra?.Redis;
             //no default database in case the ConnectionMultiplexer is accessed outside hydra
-            string connectionString = $"{redis?.Host}:{redis?.Port}";
-            if (redis?.Options != string.Empty)
+            string connectionString = $"{Redis?.Host}:{Redis?.Port}";
+            if (Redis?.Options != string.Empty)
             {
-                connectionString = $"{connectionString},{redis?.Options}";
+                connectionString = $"{connectionString},{Redis?.Options}";
             }
             return connectionString;
         }
@@ -29,33 +35,32 @@ namespace Hydra4NET
         /// <returns></returns>
         static public HydraConfigObject? Load(string configJsonPath)
         {
+            if (string.IsNullOrWhiteSpace(configJsonPath))
+                throw new ArgumentNullException(nameof(configJsonPath), "Json path cannot be null or empty");
+            if (!File.Exists(configJsonPath))
+                throw new FileNotFoundException("Json path not found");
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             };
-            string json = File.ReadAllText(configJsonPath);
-            return (JsonSerializer.Deserialize<HydraConfigObject>(json, options));
+            return JsonSerializer.Deserialize<ConventionJsonWrapper>(File.ReadAllText(configJsonPath), options)?.Hydra;
         }
-
     }
 
-    public class HydraRoot
+    /// <summary>
+    /// Wraps the conventional "hydra" object in json
+    /// </summary>
+    internal class ConventionJsonWrapper
     {
-        public string? ServiceName { get; set; }
-        public string? ServiceIP { get; set; }
-        public int? ServicePort { get; set; }
-        public string? ServiceType { get; set; }
-        public string? ServiceDescription { get; set; }
-        public Plugins? Plugins { get; set; }
-        public Redis? Redis { get; set; }
+        public HydraConfigObject? Hydra { get; set; }
     }
 
     public class Plugins
     {
-        public Hydralogger? HydraLogger { get; set; }
+        public HydraLogger? HydraLogger { get; set; }
     }
 
-    public class Hydralogger
+    public class HydraLogger
     {
         public bool LogToConsole { get; set; }
         public bool OnlyLogLocally { get; set; }

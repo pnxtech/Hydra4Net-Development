@@ -18,14 +18,14 @@ services:
   sender:
      image: 'hostingdemo'
      environment:
-       HydraConfig__Hydra__ServiceType: sender
-       HydraConfig__Hydra__ServiceName: sender-svcs
+       Hydra__ServiceType: sender
+       Hydra__ServiceName: sender-svcs
      depends_on:
        - redis
   queuer:
     image: 'hostingdemo'
     environment:
-      HydraConfig__Hydra__ServiceType: queuer
-      HydraConfig__Hydra__ServiceName: queuer-svcs
+      Hydra__ServiceType: queuer
+      Hydra__ServiceName: queuer-svcs
     depends_on:
       - redis

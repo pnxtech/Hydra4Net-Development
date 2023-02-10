@@ -1,5 +1,4 @@
 ﻿using Hydra4NET;
-using Microsoft.Extensions.Configuration;
 
 namespace MessageDemo;
 
@@ -31,14 +30,14 @@ public class App
         }
 
         // Load the hydra config.json file
-      
+
 
         // Initialize Hydra 
         await hydra.InitAsync();
 
         // Determine whether this instance of MessageDemo
         // should play the role of a sender or a queuer
-        string role = config?.Hydra?.ServiceType ?? "unknown";
+        string role = config?.ServiceType ?? "unknown";
         switch (role)
         {
             case "sender":

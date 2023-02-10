@@ -97,11 +97,11 @@ namespace Hydra4NET
             if (config is null)
                 throw new ArgumentNullException("config", "HydraConfigObject cannot be null");
             _config = config;
-            ServiceName = _config?.Hydra?.ServiceName;
-            ServiceDescription = _config?.Hydra?.ServiceDescription;
-            ServiceType = _config?.Hydra?.ServiceType;
-            ServicePort = _config?.Hydra?.ServicePort.ToString() ?? "";
-            ServiceIP = _config?.Hydra?.ServiceIP;
+            ServiceName = _config.ServiceName;
+            ServiceDescription = _config.ServiceDescription;
+            ServiceType = _config.ServiceType;
+            ServicePort = _config.ServicePort.ToString() ?? "";
+            ServiceIP = _config.ServiceIP;
         }
 
         /// <summary>
@@ -429,9 +429,9 @@ namespace Hydra4NET
 
         public IRedisConfig GetRedisConfig()
         {
-            if (_config?.Hydra?.Redis is null)
+            if (_config?.Redis is null)
                 throw new NullReferenceException("Redis configuration is null, check your configuration");
-            return _config.Hydra.Redis;
+            return _config.Redis;
         }
     }
 }

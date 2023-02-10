@@ -13,10 +13,10 @@ namespace Hydra4Net.HostingExtensions
         public static HydraConfigObject GetHydraConfig(this IConfigurationSection config) => config.Get<HydraConfigObject>();
 
         /// <summary>
-        /// Loads Hydra config from the IConfigurationSection "HydraConfig"
+        /// Loads Hydra config from the IConfigurationSection "Hydra"
         /// </summary>
         /// <param name="config"></param>
         /// <returns></returns>
-        public static HydraConfigObject GetHydraConfig(this IConfiguration config) => config.GetSection("HydraConfig").GetHydraConfig();
+        public static HydraConfigObject GetHydraConfig(this IConfiguration config) => config.GetSection("Hydra").GetHydraConfig();
     }
 }
