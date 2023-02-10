@@ -155,7 +155,6 @@ namespace Hydra4NET
             }
         }
 
-
         public async Task<PresenceNodeEntryCollection> GetPresenceAsync(string serviceName)
         {
             List<string> instanceIds = new List<string>();
@@ -188,10 +187,12 @@ namespace Hydra4NET
             return serviceEntries;
         }
 
+        static readonly DateTime _time1970 = new DateTime(1970, 1, 1);
+        private int GetUtcTimeStamp(DateTime dateRef) => (int)(dateRef.ToUniversalTime().Subtract(_time1970)).TotalSeconds;
+
         public async Task<PresenceNodeEntryCollection> GetServiceNodesAsync()
         {
-            var time1970 = new DateTime(1970, 1, 1);
-            var timeNow = (int)(DateTime.Now.ToUniversalTime().Subtract(time1970)).TotalSeconds;
+            var timeNow = GetUtcTimeStamp(DateTime.Now);
             PresenceNodeEntryCollection serviceEntries = new PresenceNodeEntryCollection();
             var db = GetDatabase();
             HashEntry[] list = await db.HashGetAllAsync($"{_redis_pre_key}:nodes");
@@ -205,7 +206,7 @@ namespace Hydra4NET
                 if (presenceNodeEntry != null)
                 {
                     var date = DateTime.Parse(presenceNodeEntry.UpdatedOn, null, System.Globalization.DateTimeStyles.RoundtripKind);
-                    var unixTimestamp = (int)(date.ToUniversalTime().Subtract(time1970)).TotalSeconds;
+                    var unixTimestamp = GetUtcTimeStamp(date);
                     presenceNodeEntry.Elapsed = timeNow - unixTimestamp;
                     serviceEntries.Add(presenceNodeEntry);
                 }
@@ -216,5 +217,3 @@ namespace Hydra4NET
         #endregion // Presence and Health check handling
     }
 }
-
-
