@@ -126,6 +126,13 @@ public class Tests
         }
     }
 
+    public async Task GetServiceNodes()
+    {
+        PresenceNodeEntryCollection? entries = await _hydra.GetServiceNodesAsync();
+        if (entries.Count == 0)
+        {
+        }
+    }
 
     /**
      * Send message
