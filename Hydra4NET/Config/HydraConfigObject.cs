@@ -15,15 +15,17 @@ namespace Hydra4NET
         public string? ServiceType { get; set; }
         public string? ServiceDescription { get; set; }
         public Plugins? Plugins { get; set; }
-        public Redis? Redis { get; set; }
+        public RedisConfig? Redis { get; set; }
 
         public string GetRedisConnectionString()
         {
+            if (Redis == null)
+                throw new NullReferenceException("Redis configuration is null");
             //no default database in case the ConnectionMultiplexer is accessed outside hydra
-            string connectionString = $"{Redis?.Host}:{Redis?.Port}";
-            if (Redis?.Options != string.Empty)
+            string connectionString = Redis.GetRedisHost();
+            if (!string.IsNullOrWhiteSpace(Redis.Options))
             {
-                connectionString = $"{connectionString},{Redis?.Options}";
+                connectionString = $"{connectionString},{Redis.Options}";
             }
             return connectionString;
         }
@@ -66,11 +68,4 @@ namespace Hydra4NET
         public bool OnlyLogLocally { get; set; }
     }
 
-    public class Redis : IRedisConfig
-    {
-        public string? Host { get; set; }
-        public int Port { get; set; }
-        public int Db { get; set; }
-        public string? Options { get; set; }
-    }
 }

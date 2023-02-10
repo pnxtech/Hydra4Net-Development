@@ -122,8 +122,7 @@ namespace Hydra4NET
         {
             if (_redis == null)
                 throw new HydraException("Hydra has not been initialized, cannot retrieve a Server instance", HydraException.ErrorType.NotInitialized);
-            var config = GetRedisConfig();
-            return _redis.GetServer($"{config.Host}:{config.Port}");
+            return _redis.GetServer(GetRedisConfig().GetRedisHost());
         }
 
         public async Task InitAsync(HydraConfigObject? config = null)
