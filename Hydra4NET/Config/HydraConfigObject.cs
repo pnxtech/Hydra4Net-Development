@@ -21,13 +21,7 @@ namespace Hydra4NET
         {
             if (Redis == null)
                 throw new NullReferenceException("Redis configuration is null");
-            //no default database in case the ConnectionMultiplexer is accessed outside hydra
-            string connectionString = Redis.GetRedisHost();
-            if (!string.IsNullOrWhiteSpace(Redis.Options))
-            {
-                connectionString = $"{connectionString},{Redis.Options}";
-            }
-            return connectionString;
+            return Redis.GetConnectionString();
         }
 
         /// <summary>
