@@ -64,7 +64,7 @@ namespace Hydra4NET
         #endregion // Entry classes
 
         #region Presence and Health check handling
-        private string BuildHealthCheckEntry()
+        private byte[] BuildHealthCheckEntry()
         {
             HealthCheckEntry healthCheckEntry = new HealthCheckEntry()
             {
@@ -88,10 +88,10 @@ namespace Hydra4NET
             var runtime = DateTime.Now - Process.GetCurrentProcess().StartTime;
             healthCheckEntry.UptimeSeconds = runtime.TotalSeconds;
 
-            return StandardSerializer.Serialize(healthCheckEntry);
+            return StandardSerializer.SerializeBytes(healthCheckEntry);
         }
 
-        private string BuildPresenceNodeEntry()
+        private byte[] BuildPresenceNodeEntry()
         {
             PresenceNodeEntry presenceNodeEntry = new PresenceNodeEntry()
             {
@@ -105,7 +105,7 @@ namespace Hydra4NET
                 HostName = HostName,
                 Elapsed = 0
             };
-            return StandardSerializer.Serialize(presenceNodeEntry);
+            return StandardSerializer.SerializeBytes(presenceNodeEntry);
         }
 
         private void ConfigurePresenceTask() => _presenceTask = UpdatePresence(); // allows for calling UpdatePresence without awaiting

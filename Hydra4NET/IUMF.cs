@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hydra4NET.Helpers;
+using System;
 
 namespace Hydra4NET
 {
@@ -50,6 +51,16 @@ namespace Hydra4NET
         /// <returns></returns>
         string Serialize();
 
+        /// <summary>
+        /// Serializes this UMF message to Utf8 encoded bytes
+        /// </summary>
+        /// <returns></returns>
+        byte[] SerializeUtf8Bytes(); 
+
+        /// <summary>
+        /// Retrieves the routing information for the message
+        /// </summary>
+        /// <returns></returns>
         UMFRouteEntry GetRouteEntry();
     }
 

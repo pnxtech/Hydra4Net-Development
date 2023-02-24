@@ -181,6 +181,8 @@ namespace Hydra4NET
         /// </summary>
         /// <returns></returns>
         public string Serialize() => StandardSerializer.Serialize(this);
+
+        public byte[] SerializeUtf8Bytes() => StandardSerializer.SerializeBytes(this);
     }
 }
 
