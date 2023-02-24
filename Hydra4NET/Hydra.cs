@@ -71,8 +71,12 @@ namespace Hydra4NET
         public string? NodeVersion { get; private set; }
         public string? InstanceID { get; private set; }
 
-        private int _isInit = 0;
-        public bool IsInitialized => _isInit != 0;
+        private readonly ThreadSafeBool _isInitialized = false;
+        public bool IsInitialized
+        {
+            get => _isInitialized.Value;
+            private set => _isInitialized.Value = value;
+        }
 
         private IConnectionMultiplexer? _redis;
 
@@ -199,8 +203,7 @@ namespace Hydra4NET
 
         private void SetInitializedTrue()
         {
-            //switch Initialized = true in atomic manner;
-            Interlocked.Increment(ref _isInit);
+            IsInitialized = true;
             _initTcs.SetResult(true);
         }
 
