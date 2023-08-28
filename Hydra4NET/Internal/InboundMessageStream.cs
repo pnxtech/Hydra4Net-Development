@@ -21,40 +21,35 @@ namespace Hydra4NET.Internal
 
         protected Channel<IInboundMessage> _channel;
 
-        private const int _IncompleteValue = 0;
+        private readonly  ThreadSafeBool _isDisposed = false;
 
-        private int _isComplete = _IncompleteValue;
-
-        public bool IsComplete => _isComplete != _IncompleteValue;
-
+        public bool IsDisposed
+        {
+            get => _isDisposed.Value;
+            private set => _isDisposed.Value = value;
+        }
+   
         public IAsyncEnumerable<IInboundMessage> EnumerateMessagesAsync(CancellationToken ct = default)
         {
             return _channel.Reader.ReadAllAsync(ct);
         }
 
-        void MarkComplete()
-        {
-            if (IsComplete)
-                return;
-            //extra thread safety
-            Interlocked.Increment(ref _isComplete);
-            _channel.Writer.TryComplete();
-        }
-
         public async ValueTask AddMessage(IInboundMessage msg)
         {
-            if(!IsComplete)
+            if(!IsDisposed)
                 await _channel.Writer.WriteAsync(msg);
         }
 
         public void Dispose()
         {
+            if (IsDisposed)
+                return;
+            IsDisposed = true;
             OnDispose();
-            MarkComplete();
+            _channel.Writer.TryComplete();
         }
 
         public Action OnDispose { get; set; } = () => { };
-
     }
 
     internal class InboundMessageStream<TResBdy> : InboundMessageStream, IInboundMessageStream<TResBdy> where TResBdy: new()

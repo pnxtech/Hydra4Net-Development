@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -71,8 +72,12 @@ namespace Hydra4NET
         public string? NodeVersion { get; private set; }
         public string? InstanceID { get; private set; }
 
-        private int _isInit = 0;
-        public bool IsInitialized => _isInit != 0;
+        private readonly ThreadSafeBool _isInitialized = false;
+        public bool IsInitialized
+        {
+            get => _isInitialized.Value;
+            private set => _isInitialized.Value = value;
+        }
 
         private IConnectionMultiplexer? _redis;
 
@@ -109,7 +114,7 @@ namespace Hydra4NET
         /// </summary>
         /// <returns></returns>
         /// <exception cref="HydraException"></exception>
-        public IDatabase GetDatabase()
+        private IDatabase GetDatabase()
         {
             if (_redis == null || _config == null)
                 throw new HydraException("Hydra has not been initialized, cannot retrieve a Database instance", HydraException.ErrorType.NotInitialized);
@@ -199,8 +204,7 @@ namespace Hydra4NET
 
         private void SetInitializedTrue()
         {
-            //switch Initialized = true in atomic manner;
-            Interlocked.Increment(ref _isInit);
+            IsInitialized = true;
             _initTcs.SetResult(true);
         }
 
@@ -210,9 +214,14 @@ namespace Hydra4NET
             => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
         public Task<bool> SendMessageAsync(IUMF message)
-            => SendMessage(message.GetRouteEntry(), message.Serialize());
+            => SendMessage(message.GetRouteEntry(), message.SerializeUtf8Bytes());
 
-        private async Task<bool> SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
+        public Task<bool> SendMessageAsync(string to, byte[] jsonUMFMessageBytes)
+           => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessageBytes);
+
+        private Task<bool> SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage) => SendMessage(parsedEntry, Encoding.UTF8.GetBytes(jsonUMFMessage));
+
+        private async Task<bool> SendMessage(UMFRouteEntry parsedEntry, byte[] jsonUMFMessage)
         {
             string instanceId = string.Empty;
             if (parsedEntry.Instance != string.Empty)
@@ -241,8 +250,12 @@ namespace Hydra4NET
 
         public Task SendBroadcastMessageAsync(string to, string jsonUMFMessage)
             => SendBroadcastMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
+        public Task SendBroadcastMessageAsync(string to, byte[] jsonUMFMessage)
+            => SendBroadcastMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
-        private async Task SendBroadcastMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
+        private Task SendBroadcastMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage) => SendBroadcastMessage(parsedEntry, Encoding.UTF8.GetBytes(jsonUMFMessage));
+
+        private async Task SendBroadcastMessage(UMFRouteEntry parsedEntry, byte[] jsonUMFMessage)
         {
             if (_redis != null)
             {
@@ -264,7 +277,9 @@ namespace Hydra4NET
             _ErrorHandler = handler;
         }
 
-        private async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
+        private Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage) => QueueMessage(entry, Encoding.UTF8.GetBytes(jsonUMFMessage));
+
+        private async Task QueueMessage(UMFRouteEntry? entry, byte[] jsonUMFMessage)
         {
             if (string.IsNullOrEmpty(entry?.Error))
             {
@@ -273,7 +288,7 @@ namespace Hydra4NET
         }
 
         public Task QueueMessageAsync(IUMF umfHeader) =>
-            QueueMessage(umfHeader?.GetRouteEntry(), umfHeader?.Serialize() ?? "");
+            QueueMessage(umfHeader?.GetRouteEntry(), umfHeader?.SerializeUtf8Bytes() ?? new byte[0]);
 
         public Task QueueMessageAsync(string jsonUMFMessage)
         {
@@ -393,7 +408,7 @@ namespace Hydra4NET
                 return;
             var db = GetDatabase();
             var key = $"{_redis_pre_key}:{ServiceName}:service";
-            await db.StringSetAsync(key, StandardSerializer.Serialize(new RegistrationEntry
+            await db.StringSetAsync(key, StandardSerializer.SerializeBytes(new RegistrationEntry
             {
                 ServiceName = ServiceName,
                 Type = ServiceType,
