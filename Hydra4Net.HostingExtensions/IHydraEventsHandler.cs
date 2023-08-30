@@ -38,14 +38,28 @@ namespace Hydra4Net.HostingExtensions
         Task OnInitError(IHydra hydra, Exception exception);
 
         /// <summary>
-        /// Called after a Hydra dequeueing error occurs
+        /// Called after a Hydra dequeuing error occurs
         /// </summary>
         /// <param name="hydra"></param>
         /// <param name="e"></param>
         /// <returns></returns>
         Task OnDequeueError(IHydra hydra, Exception e);
 
+        /// <summary>
+        /// Called when a Hydra internal error occurs
+        /// </summary>
+        /// <param name="hydra"></param>
+        /// <param name="e"></param>
+        /// <returns></returns>
         Task OnInternalError(IHydra hydra, Exception e);
+
+        /// <summary>
+        /// Called when a Hydra debug information is emitted
+        /// </summary>
+        /// <param name="hydra"></param>
+        /// <param name="e"></param>
+        /// <returns></returns>
+        void OnDebugEvent(IHydra hydra, DebugEvent e);
 
         /// <summary>
         /// Called on application shutdown

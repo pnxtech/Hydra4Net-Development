@@ -3,7 +3,6 @@ using StackExchange.Redis;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 /*
@@ -116,13 +115,20 @@ namespace Hydra4NET
             {
                 while (!_cts.Token.IsCancellationRequested)
                 {
-                    await PresenceEvent();
-                    if (_secondsTick++ == _HEALTH_UPDATE_INTERVAL)
+                    try
                     {
-                        await HealthCheckEvent();
-                        _secondsTick = _ONE_SECOND;
+                        await PresenceEvent();
+                        if (_secondsTick++ == _HEALTH_UPDATE_INTERVAL)
+                        {
+                            await HealthCheckEvent();
+                            _secondsTick = _ONE_SECOND;
+                        }
+                        await Task.Delay(_ONE_SECOND * 1000, _cts.Token);
                     }
-                    await Task.Delay(_ONE_SECOND * 1000, _cts.Token);
+                    catch (Exception e)
+                    {
+                        await EmitError(e);
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -132,7 +138,7 @@ namespace Hydra4NET
 
         private async Task PresenceEvent()
         {
-            if (_redis != null)
+            if (_redis != null && _redis.IsConnected)
             {
                 var db = GetDatabase();
                 await db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:presence", InstanceID);
@@ -143,7 +149,7 @@ namespace Hydra4NET
 
         private async Task HealthCheckEvent()
         {
-            if (_redis != null)
+            if (_redis != null && _redis.IsConnected)
             {
                 var db = GetDatabase();
                 await db.StringSetAsync($"{_redis_pre_key}:{ServiceName}:{InstanceID}:health", BuildHealthCheckEntry());
@@ -168,11 +174,7 @@ namespace Hydra4NET
                 string? s = await GetDatabase().HashGetAsync(_nodes_hash_key, id);
                 if (s != null)
                 {
-                    PresenceNodeEntry? presenceNodeEntry = JsonSerializer.Deserialize<PresenceNodeEntry>(s, new JsonSerializerOptions()
-                    {
-                        PropertyNameCaseInsensitive = true,
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    });
+                    PresenceNodeEntry? presenceNodeEntry = StandardSerializer.Deserialize<PresenceNodeEntry>(s);
                     if (presenceNodeEntry != null)
                     {
                         serviceEntries.Add(presenceNodeEntry);
@@ -194,11 +196,7 @@ namespace Hydra4NET
             HashEntry[] list = await db.HashGetAllAsync($"{_redis_pre_key}:nodes");
             foreach (var entry in list)
             {
-                PresenceNodeEntry? presenceNodeEntry = JsonSerializer.Deserialize<PresenceNodeEntry>(entry.Value, new JsonSerializerOptions()
-                {
-                    PropertyNameCaseInsensitive = true,
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+                PresenceNodeEntry? presenceNodeEntry = StandardSerializer.Deserialize<PresenceNodeEntry>((string?)entry.Value ?? "");
                 if (presenceNodeEntry != null)
                 {
                     var unixTimestamp = GetUtcTimeStamp(presenceNodeEntry.UpdatedOn);

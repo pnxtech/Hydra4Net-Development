@@ -10,7 +10,7 @@ COPY ["Hydra4Net.HostingExtensions/Hydra4Net.HostingExtensions.csproj", "Hydra4N
 COPY ["Hydra4NET/Hydra4NET.csproj", "Hydra4NET/"]
 RUN dotnet restore "HostingMessageDemo/HostingMessageDemo.csproj"
 COPY . .
-WORKDIR "/src/HostingMessageDemo"
+WORKDIR "HostingMessageDemo"
 RUN dotnet build "HostingMessageDemo.csproj" -c Release -o /app/build
 
 FROM build AS publish

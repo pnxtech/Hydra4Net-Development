@@ -84,6 +84,12 @@ namespace Hydra4NET
         void OnInternalErrorHandler(InternalErrorHandler handler);
 
         /// <summary>
+        /// Registers an asynchronous event handler for when debug events are emitted by Hydra
+        /// </summary>
+        /// <param name="handler"></param>
+        void OnDebugEventHandler(InternalDebugHandler handler);
+
+        /// <summary>
         /// Adds a message to a services queue
         /// </summary>
         /// <param name="jsonUMFMessage"></param>
@@ -113,14 +119,6 @@ namespace Hydra4NET
         Task SendBroadcastMessageAsync(IUMF message);
 
         /// <summary>
-        /// Sends a UTF8-encoded message to all instances of a service
-        /// </summary>
-        /// <param name="to"></param>
-        /// <param name="jsonUMFMessage"></param>
-        /// <returns></returns>
-        Task SendBroadcastMessageAsync(string to, byte[] jsonUMFMessage);
-
-        /// <summary>
         /// Sends a message to a service instance
         /// </summary>
         /// <param name="to"></param>
@@ -134,14 +132,6 @@ namespace Hydra4NET
         /// <param name="message"></param>
         /// <returns></returns>
         Task<bool> SendMessageAsync(IUMF message);
-
-        /// <summary>
-        /// Sends a UTF8-encoded message to a service instance
-        /// </summary>
-        /// <param name="to"></param>
-        /// <param name="jsonUMFMessage"></param>
-        /// <returns></returns>
-        Task<bool> SendMessageAsync(string to, byte[] jsonUMFMessage);
 
         /// <summary>
         /// Gets a UMF instance with default values set for sending

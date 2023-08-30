@@ -5,7 +5,6 @@ using System;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -88,8 +87,7 @@ namespace Hydra4NET
         public delegate Task UMFMessageHandler(IInboundMessage msg);
         private UMFMessageHandler? _MessageHandler = null;
 
-        public delegate Task InternalErrorHandler(Exception exception);
-        private InternalErrorHandler? _ErrorHandler;
+
         #endregion // Message delegate
 
         public Hydra(HydraConfigObject config)
@@ -178,6 +176,7 @@ namespace Hydra4NET
                 }
                 InstanceID = Guid.NewGuid().ToString().Replace("-", "");
                 _redis = ConnectionMultiplexer.Connect(_config.GetRedisConnectionString());
+
                 //TODO: validate conn string here and give detailed errors if something missing?
                 if (_redis != null && _redis.IsConnected)
                 {
@@ -199,7 +198,6 @@ namespace Hydra4NET
             {
                 throw new HydraException("Failed to initialize Hydra", e, HydraException.ErrorType.InitializationError);
             }
-
         }
 
         private void SetInitializedTrue()
@@ -214,14 +212,9 @@ namespace Hydra4NET
             => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
         public Task<bool> SendMessageAsync(IUMF message)
-            => SendMessage(message.GetRouteEntry(), message.SerializeUtf8Bytes());
+            => SendMessage(message.GetRouteEntry(), message.Serialize());
 
-        public Task<bool> SendMessageAsync(string to, byte[] jsonUMFMessageBytes)
-           => SendMessage(UMFBase.ParseRoute(to), jsonUMFMessageBytes);
-
-        private Task<bool> SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage) => SendMessage(parsedEntry, Encoding.UTF8.GetBytes(jsonUMFMessage));
-
-        private async Task<bool> SendMessage(UMFRouteEntry parsedEntry, byte[] jsonUMFMessage)
+        private async Task<bool> SendMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
         {
             string instanceId = string.Empty;
             if (parsedEntry.Instance != string.Empty)
@@ -236,9 +229,12 @@ namespace Hydra4NET
                     // Pick random presence entry
                     instanceId = entries.GetRandomEntry()?.InstanceID ?? "";
                 }
+                else
+                    EmitDebug(DebugEventType.SendMessage, jsonUMFMessage, "Could not find presence entry to send message");
             }
             if (instanceId != string.Empty && _redis != null)
             {
+                EmitDebug(DebugEventType.SendMessage, jsonUMFMessage, $"Sending message to instance {instanceId}");
                 await _redis.GetSubscriber().PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}:{instanceId}", jsonUMFMessage);
                 return true; //TODO: if above returns > 0 and the redis instance is not a cluster, that indicates that message was sent.  Can we safely use this info?
             }
@@ -250,15 +246,12 @@ namespace Hydra4NET
 
         public Task SendBroadcastMessageAsync(string to, string jsonUMFMessage)
             => SendBroadcastMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
-        public Task SendBroadcastMessageAsync(string to, byte[] jsonUMFMessage)
-            => SendBroadcastMessage(UMFBase.ParseRoute(to), jsonUMFMessage);
 
-        private Task SendBroadcastMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage) => SendBroadcastMessage(parsedEntry, Encoding.UTF8.GetBytes(jsonUMFMessage));
-
-        private async Task SendBroadcastMessage(UMFRouteEntry parsedEntry, byte[] jsonUMFMessage)
+        private async Task SendBroadcastMessage(UMFRouteEntry parsedEntry, string jsonUMFMessage)
         {
             if (_redis != null)
             {
+                EmitDebug(DebugEventType.SendBroadcastMessage, jsonUMFMessage, $"Sending broadcast message");
                 await _redis.GetSubscriber().PublishAsync($"{_mc_message_key}:{parsedEntry.ServiceName}", jsonUMFMessage);
             }
         }
@@ -270,25 +263,21 @@ namespace Hydra4NET
             _MessageHandler = handler;
         }
 
-        public void OnInternalErrorHandler(InternalErrorHandler handler)
-        {
-            if (handler is null)
-                throw new ArgumentNullException("handler", "InternalErrorHandler cannot be null");
-            _ErrorHandler = handler;
-        }
-
-        private Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage) => QueueMessage(entry, Encoding.UTF8.GetBytes(jsonUMFMessage));
-
-        private async Task QueueMessage(UMFRouteEntry? entry, byte[] jsonUMFMessage)
+        private async Task QueueMessage(UMFRouteEntry? entry, string jsonUMFMessage)
         {
             if (string.IsNullOrEmpty(entry?.Error))
             {
+                EmitDebug(DebugEventType.SendBroadcastMessage, jsonUMFMessage, $"Sending queued message");
                 await GetDatabase().ListLeftPushAsync($"{_redis_pre_key}:{entry!.ServiceName}:mqrecieved", jsonUMFMessage);
+            }
+            else
+            {
+                EmitDebug(DebugEventType.SendQueue, jsonUMFMessage, $"Route Error queueing message: {entry?.Error}");
             }
         }
 
         public Task QueueMessageAsync(IUMF umfHeader) =>
-            QueueMessage(umfHeader?.GetRouteEntry(), umfHeader?.SerializeUtf8Bytes() ?? new byte[0]);
+            QueueMessage(umfHeader?.GetRouteEntry(), umfHeader?.Serialize() ?? "");
 
         public Task QueueMessageAsync(string jsonUMFMessage)
         {
@@ -316,6 +305,7 @@ namespace Hydra4NET
                 UMFRouteEntry entry = umfHeader.GetRouteEntry();
                 if (entry != null)
                 {
+                    EmitDebug(DebugEventType.MarkQueueMessage, jsonUMFMessage, $"Marking queue message");
                     var db = GetDatabase();
                     await db.ListRemoveAsync($"{_redis_pre_key}:{entry.ServiceName}:mqinprogress", jsonUMFMessage, -1);
                     if (completed == false)
@@ -377,7 +367,7 @@ namespace Hydra4NET
             try
             {
                 string msg = (string?)value ?? String.Empty;
-
+                EmitDebug(DebugEventType.MessageReceived, msg, $"Message received");
                 var umf = ReceivedUMF.Deserialize(msg);
                 var inMsg = new InboundMessage
                 {
@@ -395,8 +385,7 @@ namespace Hydra4NET
             }
             catch (Exception e)
             {
-                if (_ErrorHandler != null)
-                    await _ErrorHandler(e);
+                await EmitError(e);
             }
         }
 
@@ -406,6 +395,7 @@ namespace Hydra4NET
         {
             if (_redis == null)
                 return;
+            EmitDebug(DebugEventType.Register, "", $"Registering to hydra");
             var db = GetDatabase();
             var key = $"{_redis_pre_key}:{ServiceName}:service";
             await db.StringSetAsync(key, StandardSerializer.SerializeBytes(new RegistrationEntry
@@ -446,6 +436,45 @@ namespace Hydra4NET
                 throw new NullReferenceException("Redis configuration is null, check your configuration");
             return _config.Redis;
         }
+
+        public delegate Task InternalErrorHandler(Exception exception);
+        private InternalErrorHandler? _ErrorHandler;
+
+        public void OnInternalErrorHandler(InternalErrorHandler handler)
+        {
+            if (handler is null)
+                throw new ArgumentNullException("handler", "InternalErrorHandler cannot be null");
+            _ErrorHandler = handler;
+        }
+
+        async ValueTask EmitError(Exception e)
+        {
+            if (_ErrorHandler != null)
+                await _ErrorHandler(e);
+        }
+
+        public delegate void InternalDebugHandler(DebugEvent debugEvent);
+        private InternalDebugHandler? _DebugHandler;
+
+        public void OnDebugEventHandler(InternalDebugHandler handler)
+        {
+            if (handler is null)
+                throw new ArgumentNullException("handler", "InternalDebugHandler cannot be null");
+            _DebugHandler = handler;
+        }
+
+        void EmitDebug(DebugEventType debugEventType, string umf, string message)
+        {
+            if (_DebugHandler is null || _config is null || !_config.EmitDebugEvents)
+                return;
+            if (_config.EmitDebugMaxUmfLength.GetValueOrDefault() > 0 && umf.Length > _config.EmitDebugMaxUmfLength)
+                umf = umf.Substring(0, _config.EmitDebugMaxUmfLength.Value);
+            _DebugHandler(new DebugEvent
+            {
+                EventType = debugEventType,
+                UMF = umf,
+                Message = message,
+            });
+        }
     }
 }
-
