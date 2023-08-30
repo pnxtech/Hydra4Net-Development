@@ -67,5 +67,13 @@ namespace Hydra4Net.HostingExtensions
         /// <param name="hydra"></param>
         /// <returns></returns>
         Task OnShutdown(IHydra hydra);
+
+        /// <summary>
+        /// Called when Hydra connection to Redis changes
+        /// </summary>
+        /// <param name="hydra"></param>
+        /// <param name="connectionStatus"></param>
+        /// <returns></returns>
+        Task OnRedisConnectionChange(IHydra hydra, RedisConnectionStatus connectionStatus);
     }
 }

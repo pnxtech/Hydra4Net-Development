@@ -50,6 +50,7 @@ namespace Hydra4Net.HostingExtensions
             {
                 _hydra.OnMessageHandler((msg) => PerformHandlerAction(e => e.OnMessageReceived(msg, _hydra)));
                 _hydra.OnInternalErrorHandler((ex) => PerformHandlerAction(e => e.OnInternalError(_hydra, ex)));
+                _hydra.OnRedisConnectionChange((s) => PerformHandlerAction(e => e.OnRedisConnectionChange(_hydra, s)));
                 _hydra.OnDebugEventHandler((ev) => PerformHandlerAction(e => e.OnDebugEvent(_hydra, ev)));
                 await PerformHandlerAction(e => e.BeforeInit(_hydra));
                 await _hydra.InitAsync();

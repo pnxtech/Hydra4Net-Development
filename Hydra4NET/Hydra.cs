@@ -78,6 +78,8 @@ namespace Hydra4NET
             private set => _isInitialized.Value = value;
         }
 
+        public bool IsRedisConnected => _redis != null && _redis.IsConnected;
+
         private IConnectionMultiplexer? _redis;
 
         #endregion // Class variables
@@ -128,6 +130,59 @@ namespace Hydra4NET
             return _redis.GetServer(GetRedisConfig().GetRedisHost());
         }
 
+        private void SetupEnvironmentConfig()
+        {
+            HostName = Dns.GetHostName();
+            ProcessID = Process.GetCurrentProcess().Id;
+            Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
+            NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+
+            if (ServiceIP == null || ServiceIP == string.Empty)
+            {
+                using Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+                socket.Connect("8.8.8.8", 65530);
+                if (socket.LocalEndPoint is IPEndPoint endPoint)
+                {
+                    ServiceIP = endPoint.Address.ToString();
+                }
+            }
+            else if (ServiceIP.Contains(".") && ServiceIP.Contains("*"))
+            {
+                // then IP address field specifies a pattern match
+                int starPoint = ServiceIP.IndexOf("*");
+                string pattern = ServiceIP.Substring(0, starPoint);
+                string selectedIP = string.Empty;
+                var myhost = Dns.GetHostEntry(Dns.GetHostName());
+                foreach (var ipaddr in myhost.AddressList)
+                {
+                    if (ipaddr.AddressFamily == AddressFamily.InterNetwork)
+                    {
+                        string ip = ipaddr.ToString();
+                        if (ip.StartsWith(pattern))
+                        {
+                            selectedIP = ip;
+                            break;
+                        }
+                    }
+                }
+                ServiceIP = selectedIP;
+            }
+        }
+
+        private void ConfigureReconnect()
+        {
+            _redis!.ConnectionFailed += async (s, e) =>
+            {
+                if (!_cts.IsCancellationRequested)
+                    await EmitStatusChange(new RedisConnectionStatus(ConnectionStatus.Disconnected, "Redis connection lost, retrying", e.Exception));
+            };
+
+            _redis!.ConnectionRestored += async (s, e) =>
+            {
+                await EmitStatusChange(new RedisConnectionStatus(ConnectionStatus.Reconnected, "Redis connection restored", e.Exception));
+            };
+        }
+
         public async Task InitAsync(HydraConfigObject? config = null)
         {
             if (IsInitialized)
@@ -139,43 +194,10 @@ namespace Hydra4NET
             try
             {
                 //probably throw if no config passed or invalid?
-                HostName = Dns.GetHostName();
-                ProcessID = Process.GetCurrentProcess().Id;
-                Architecture = Environment.GetEnvironmentVariable("PROCESSOR_ARCHITECTURE");
-                NodeVersion = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
-
-                if (ServiceIP == null || ServiceIP == string.Empty)
-                {
-                    using Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0);
-                    socket.Connect("8.8.8.8", 65530);
-                    if (socket.LocalEndPoint is IPEndPoint endPoint)
-                    {
-                        ServiceIP = endPoint.Address.ToString();
-                    }
-                }
-                else if (ServiceIP.Contains(".") && ServiceIP.Contains("*"))
-                {
-                    // then IP address field specifies a pattern match
-                    int starPoint = ServiceIP.IndexOf("*");
-                    string pattern = ServiceIP.Substring(0, starPoint);
-                    string selectedIP = string.Empty;
-                    var myhost = Dns.GetHostEntry(Dns.GetHostName());
-                    foreach (var ipaddr in myhost.AddressList)
-                    {
-                        if (ipaddr.AddressFamily == AddressFamily.InterNetwork)
-                        {
-                            string ip = ipaddr.ToString();
-                            if (ip.StartsWith(pattern))
-                            {
-                                selectedIP = ip;
-                                break;
-                            }
-                        }
-                    }
-                    ServiceIP = selectedIP;
-                }
+                SetupEnvironmentConfig();
                 InstanceID = Guid.NewGuid().ToString().Replace("-", "");
                 _redis = ConnectionMultiplexer.Connect(_config.GetRedisConnectionString());
+                await EmitStatusChange(new RedisConnectionStatus(ConnectionStatus.Connected, "Redis connection established"));
 
                 //TODO: validate conn string here and give detailed errors if something missing?
                 if (_redis != null && _redis.IsConnected)
@@ -184,6 +206,7 @@ namespace Hydra4NET
                     ConfigurePresenceTask();
                     ConfigureEventsChannel();
                     SetInitializedTrue();
+                    ConfigureReconnect();
                 }
                 else
                 {
@@ -395,9 +418,13 @@ namespace Hydra4NET
         {
             if (_redis == null)
                 return;
+
             EmitDebug(DebugEventType.Register, "", $"Registering to hydra");
+
             var db = GetDatabase();
             var key = $"{_redis_pre_key}:{ServiceName}:service";
+
+            //this gets set once and then expires in 3 seconds, does this need to be refreshed with the presence?
             await db.StringSetAsync(key, StandardSerializer.SerializeBytes(new RegistrationEntry
             {
                 ServiceName = ServiceName,
@@ -405,7 +432,7 @@ namespace Hydra4NET
             }));
             await db.KeyExpireAsync(key, TimeSpan.FromSeconds(_KEY_EXPIRATION_TTL));
 
-            //use concurrent subscription
+            //use concurrent subscription.  Redis wil lresubscribe on reconnect
             await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}", (c, m) => Task.Run(() => HandleMessage(m)));
             await _redis.GetSubscriber().SubscribeAsync($"{_mc_message_key}:{ServiceName}:{InstanceID}", (c, m) => Task.Run(() => HandleMessage(m)));
         }
@@ -437,6 +464,8 @@ namespace Hydra4NET
             return _config.Redis;
         }
 
+        #region Events
+
         public delegate Task InternalErrorHandler(Exception exception);
         private InternalErrorHandler? _ErrorHandler;
 
@@ -447,10 +476,14 @@ namespace Hydra4NET
             _ErrorHandler = handler;
         }
 
-        async ValueTask EmitError(Exception e)
+        async Task EmitError(Exception e)
         {
-            if (_ErrorHandler != null)
-                await _ErrorHandler(e);
+            try
+            {
+                if (_ErrorHandler != null)
+                    await _ErrorHandler(e);
+            }
+            catch { }
         }
 
         public delegate void InternalDebugHandler(DebugEvent debugEvent);
@@ -467,14 +500,43 @@ namespace Hydra4NET
         {
             if (_DebugHandler is null || _config is null || !_config.EmitDebugEvents)
                 return;
-            if (_config.EmitDebugMaxUmfLength.GetValueOrDefault() > 0 && umf.Length > _config.EmitDebugMaxUmfLength)
-                umf = umf.Substring(0, _config.EmitDebugMaxUmfLength.Value);
-            _DebugHandler(new DebugEvent
+            try
             {
-                EventType = debugEventType,
-                UMF = umf,
-                Message = message,
-            });
+                if (_config.EmitDebugMaxUmfLength.GetValueOrDefault() > 0 && umf.Length > _config.EmitDebugMaxUmfLength)
+                    umf = umf.Substring(0, _config.EmitDebugMaxUmfLength.Value);
+                _DebugHandler(new DebugEvent
+                {
+                    EventType = debugEventType,
+                    UMF = umf,
+                    Message = message,
+                });
+            }
+            catch { }
         }
+
+        public delegate Task ReconnectHandler(RedisConnectionStatus status);
+        private ReconnectHandler? _ConnectHandler;
+
+        public void OnRedisConnectionChange(ReconnectHandler handler)
+        {
+            if (handler is null)
+                throw new ArgumentNullException("handler", "InternalErrorHandler cannot be null");
+            _ConnectHandler = handler;
+        }
+
+        async Task EmitStatusChange(RedisConnectionStatus status)
+        {
+            try
+            {
+                if (_ConnectHandler != null)
+                    await _ConnectHandler(status);
+            }
+            catch (Exception e)
+            {
+                await EmitError(e);
+            }
+        }
+
+        #endregion
     }
 }
