@@ -47,6 +47,8 @@ namespace Hydra4NET
             {
                 try
                 {
+                    if (!_hydra.IsRedisConnected)
+                        return;
                     string message = await _hydra.GetQueueMessageAsync();
                     if (message != string.Empty)
                     {
@@ -83,6 +85,7 @@ namespace Hydra4NET
                     _timer?.Change((int)_slidingDuration, 0);
                 }
             }, null, 0, 0);
+
             //when cancelled, it will stop the timer
             ct.Register(() => _timer?.Change(Timeout.Infinite, 0));
         }

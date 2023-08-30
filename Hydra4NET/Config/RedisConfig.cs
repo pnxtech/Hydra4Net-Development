@@ -14,5 +14,15 @@ namespace Hydra4NET
                 throw new ArgumentNullException(nameof(Host), "Host cannot be null or empty");
             return $"{Host}:{Port ?? 6379}";
         }
+        public string GetConnectionString()
+        {
+            //no default database in case the ConnectionMultiplexer is accessed outside hydra
+            string connectionString = GetRedisHost();
+            if (!string.IsNullOrWhiteSpace(Options))
+            {
+                connectionString = $"{connectionString},{Options}";
+            }
+            return connectionString;
+        }
     }
 }

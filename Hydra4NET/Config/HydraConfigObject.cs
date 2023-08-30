@@ -17,17 +17,21 @@ namespace Hydra4NET
         public Plugins? Plugins { get; set; }
         public RedisConfig? Redis { get; set; }
 
+        /// <summary>
+        /// Configure whether to emit debug events from 
+        /// </summary>
+        public bool EmitDebugEvents { get; set; } = true;
+
+        /// <summary>
+        /// The maximum length of the UMF message to emit in debug events.  Larger UMFs will be truncated if value > 0.
+        /// </summary>
+        public int? EmitDebugMaxUmfLength { get; set; } = 2000;
+
         public string GetRedisConnectionString()
         {
             if (Redis == null)
                 throw new NullReferenceException("Redis configuration is null");
-            //no default database in case the ConnectionMultiplexer is accessed outside hydra
-            string connectionString = Redis.GetRedisHost();
-            if (!string.IsNullOrWhiteSpace(Redis.Options))
-            {
-                connectionString = $"{connectionString},{Redis.Options}";
-            }
-            return connectionString;
+            return Redis.GetConnectionString();
         }
 
         /// <summary>

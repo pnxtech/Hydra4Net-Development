@@ -12,6 +12,11 @@ namespace Hydra4NET
         /// <param name="ct"></param>
         /// <returns></returns>
         IAsyncEnumerable<IInboundMessage> EnumerateMessagesAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// Indicates whether the stream has been marked to stop listening for messages
+        /// </summary>
+        bool IsDisposed { get; }
     }
 
     public interface IInboundMessageStream<TResBdy> : IInboundMessageStream

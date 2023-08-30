@@ -84,6 +84,23 @@ namespace Hydra4NET
         void OnInternalErrorHandler(InternalErrorHandler handler);
 
         /// <summary>
+        /// Registers an asynchronous event handler for when debug events are emitted by Hydra
+        /// </summary>
+        /// <param name="handler"></param>
+        void OnDebugEventHandler(InternalDebugHandler handler);
+
+        /// <summary>
+        /// Called when Hydra's connection to Redis changes states
+        /// </summary>
+        /// <param name="handler"></param>
+        void OnRedisConnectionChange(ReconnectHandler handler);
+
+        /// <summary>
+        /// Whether Hydra is currently connected to Redis
+        /// </summary>
+        bool IsRedisConnected { get; }
+
+        /// <summary>
         /// Adds a message to a services queue
         /// </summary>
         /// <param name="jsonUMFMessage"></param>
